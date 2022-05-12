@@ -2,10 +2,9 @@ import argparse
 import os
 import time
 
-from broker.client_manager import ClientManager
-from util.configreader import BrokerConfigReader as ConfigReader
 from broker.listeners import *
 from broker.subscription_manager import SubscriptionManager
+from util.configreader import BrokerConfigReader as ConfigReader
 
 if __name__ == "__main__":
     # Listeners
