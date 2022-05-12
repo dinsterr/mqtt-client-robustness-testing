@@ -2,7 +2,7 @@ import socket
 import threading
 
 import util.logger as logger
-from client_manager import *
+from broker.client_manager import *
 from util.exceptions import MQTTMessageNotSupportedException, IncorrectProtocolOrderException
 from packets.mqtt_packet_manager import MQTTPacketManager
 
@@ -203,7 +203,7 @@ class Listener(object):
         self._client_manager = client_manager
 
     def __str__(self):
-        return f"MQTT Listener: [Port: {self._port}"
+        return f"MQTT Listener: [Port: {self._port}]"
 
     def listen(self):
         """
