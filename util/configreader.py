@@ -38,7 +38,8 @@ class BrokerConfigReader(object):
         start = 0
         while True:
             start = string.find(sub, start)
-            if start == -1: return
+            if start == -1:
+                return
             yield start
             start += len(sub)
 
@@ -73,11 +74,13 @@ class BrokerConfigReader(object):
                 value = BrokerConfigReader.handle_config_value(identifier, setting[1].lower().strip())
             except FileNotFoundError:
                 print(
-                    f"An error has occurred at the value of your setting '{identifier}'. File '{setting[1]}' not found.")
+                    f"An error has occurred at the value of your setting '{identifier}'. "
+                    f"File '{setting[1]}' not found.")
                 exit(0)
             except ValueError:
                 print(
-                    f"An error has occurred at the value of your setting '{identifier}'. Value '{setting[1]}' is not supported.")
+                    f"An error has occurred at the value of your setting '{identifier}'. "
+                    f"Value '{setting[1]}' is not supported.")
                 exit(0)
             except SyntaxError:
                 print(
@@ -85,7 +88,8 @@ class BrokerConfigReader(object):
                 exit(0)
         except IndexError as e:
             print(
-                f"An error has occurred during the broker config-file parsing. Please provide values for all your settings.")
+                f"An error has occurred during the broker config-file parsing. "
+                f"Please provide values for all your settings.")
             exit(0)
 
     @staticmethod

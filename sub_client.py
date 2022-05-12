@@ -104,7 +104,8 @@ if __name__ == '__main__':
 
     # argument parser
     parser = argparse.ArgumentParser("client_pub", description="MQTT Subscribe client supporting Multilateral Security",
-                                     epilog="Developed by Babbadeckl. Questions and Bug-reports can be mailed to korbinian.spielvogel@uni-passau.de")
+                                     epilog="Developed by Babbadeckl. Questions and Bug-reports can be mailed to "
+                                            "korbinian.spielvogel@uni-passau.de")
     # argument for client name
     parser.add_argument('-i', '--id', default=CLIENT_ID, type=str, dest="client_id", metavar="CLIENT_ID",
                         help=f"Client identifier. Defaults to random int.")
