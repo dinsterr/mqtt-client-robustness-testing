@@ -53,7 +53,6 @@ class ClientManager(object):
     def check_status_order_validity(old_status, new_status):
         """
         Check if the new_status fulfills the order of the MQTT protocol in respect to the old_status
-        :param self: NOT USED
         :param old_status: old protocol status of the client
         :param new_status: new protocol status of the client
         :return: True, if new_status is subsequent to old_status (according to MQTTv5.0 specifications)

@@ -1,12 +1,9 @@
-import socket
 import threading
 
-import util.logger as logger
-from broker.client_manager import *
-from util.exceptions import MQTTMessageNotSupportedException, IncorrectProtocolOrderException
+from packets import enums
 from packets.mqtt_packet_manager import MQTTPacketManager
-
-ALLOWED_CONNECTIONS = 10
+from util import logger as logger
+from util.exceptions import IncorrectProtocolOrderException, MQTTMessageNotSupportedException
 
 
 class ClientThread(threading.Thread):
@@ -79,8 +76,9 @@ class ClientThread(threading.Thread):
 
     def handle_subscribe(self, parsed_msg):
         """
-        Handle the MQTT SUBSCRIBE message: check if the client has a valid status (CONN_RECV or SUB_RECV), then update the
-        client status to SUB_RECV. Add the client to the subscriber list and send a PUBACK message back to the client.
+        Handle the MQTT SUBSCRIBE message: check if the client has a valid status (CONN_RECV or SUB_RECV), then update
+        the client status to SUB_RECV. Add the client to the subscriber list and send a PUBACK message back to the
+        client.
         :param parsed_msg: a parsed version of the received message
         """
         if self._client_manager.get_client_status(self.client_socket, self.client_address) in [enums.Status.CONN_RECV,
@@ -132,28 +130,24 @@ class ClientThread(threading.Thread):
                     parsed_msg = MQTTPacketManager.parse_packet(msg, self.client_socket, self.client_address,
                                                                 self._client_manager)
                     if parsed_msg['identifier'] == enums.PacketIdentifer.CONNECT:
-                        logger.logging.info(
-                            f"Received CONNECT message from Client {parsed_msg['client_id']} on Port {self.listener.port}: {msg}")
+                        self.log_received_packet(msg, parsed_msg)
                         self.handle_connect(parsed_msg)
                     elif parsed_msg['identifier'] == enums.PacketIdentifer.PUBLISH:
-                        logger.logging.info(
-                            f"Received PUBLISH message from Client {self.client_id} on Port {self.listener.port}: {msg}")
+                        self.log_received_packet(msg, parsed_msg)
                         self.handle_publish(parsed_msg)
                     elif parsed_msg['identifier'] == enums.PacketIdentifer.SUBSCRIBE:
-                        logger.logging.info(
-                            f"Received SUBSCRIBE message from Client {self.client_id} on Port {self.listener.port}: {msg}")
+                        self.log_received_packet(msg, parsed_msg)
                         self.handle_subscribe(parsed_msg)
                     elif parsed_msg['identifier'] == enums.PacketIdentifer.PINGREQ:
-                        logger.logging.info(
-                            f"Received PINGREQ message from Client {self.client_id} on Port {self.listener.port}: {msg}")
+                        self.log_received_packet(msg, parsed_msg)
                         self.handle_pingreq(parsed_msg)
                     elif parsed_msg['identifier'] == enums.PacketIdentifer.DISCONNECT:
-                        logger.logging.info(
-                            f"Received DISCONNECT message from Client {self.client_id} on Port {self.listener.port}: {msg}")
+                        self.log_received_packet(msg, parsed_msg)
                         self.handle_disconnect(parsed_msg)
                     else:
                         raise MQTTMessageNotSupportedException(
-                            f'Client {self.client_address} sent a message with identifier: `{parsed_msg["identifier"]}`. Not supported, therefore ignored!')
+                            f'Client {self.client_address} sent a message with identifier: '
+                            f'`{parsed_msg["identifier"]}`. Not supported, therefore ignored!')
         except OSError:
             pass
         except MQTTMessageNotSupportedException as e:
@@ -161,6 +155,11 @@ class ClientThread(threading.Thread):
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
             self.close()
+
+    def log_received_packet(self, msg, parsed_msg):
+        logger.logging.info(
+            f"Received {parsed_msg['identifier'].name} message from Client {parsed_msg['client_id']}"
+            f" on Port {self.listener.port}: {msg}")
 
     def close(self):
         """
@@ -175,82 +174,4 @@ class ClientThread(threading.Thread):
         """
         Check if the client thread is closed.
         """
-        return self._stop_event.isSet()
-
-
-class Listener(object):
-    """
-    MQTT Listener. No security mechanisms in place.
-    """
-
-    def __init__(self, config, subscription_manager, client_manager, ip, debug=0):
-        """
-        Constructor for the MQTT Listener
-        :param config: contains the initialized config setting
-        :param ip: ip of the listener
-        :param debug: debug mode on/off
-        """
-        self._ip = ip
-        self._port = config.port
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind((self._ip, self._port))
-        self.sock.listen(ALLOWED_CONNECTIONS)
-        self._running = True
-        self.open_sockets = {}
-        self.debug = debug
-        self._subscription_manager = subscription_manager
-        self._client_manager = client_manager
-
-    def __str__(self):
-        return f"MQTT Listener: [Port: {self._port}]"
-
-    def listen(self):
-        """
-        Listens for incoming socket connections to the broker port and creates a @ClientThread for each unique connection
-        , that then takes over the task of listening for messages on the established socket.
-        """
-        logger.logging.info(f"{self.__str__()} running ...")
-        while self._running:
-            try:
-                client_socket, client_address = self.sock.accept()
-                if client_socket and client_address:
-                    client_thread = ClientThread(client_socket, client_address, self, self._subscription_manager,
-                                                 self._client_manager, self.debug)
-                    self.open_sockets[client_address] = client_thread
-                    client_thread.setDaemon(True)
-                    client_thread.start()
-            except ConnectionAbortedError:
-                logger.logging.info("Closed socket connection of Listener.")
-
-    def close_sockets(self):
-        """
-        Iterates over all open sockets and "closes" them, so that no open sockets and threads remain.
-        ONLY USED FOR DEBUGGING PURPOSE AS DAEMON CHARACTERISTIC OF THREAD TAKES CARE OF THIS.
-        """
-        if len(self.open_sockets) != 0:
-            logger.logging.info("--- Closing open client connections")
-            for index, client_thread in enumerate(self.open_sockets):
-                logger.logging.info(f"\t --- Connection {index + 1}/{len(self.open_sockets)} closed")
-            logger.logging.info("--- All open client connections were successfully closed.")
-        self.sock.close()
-
-    @property
-    def running(self):
-        return self._running
-
-    @running.setter
-    def running(self, value):
-        self._running = value
-
-    @property
-    def port(self):
-        return self._port
-
-    @port.setter
-    def port(self, value):
-        self._port = value
-
-    def remove_client_thread(self, client_thread):
-        self.open_sockets.pop(client_thread.client_address)
-        logger.logging.info(f"- Successfully closed ClientThread, that managed '{client_thread.client_id}'")
+        return self._stop_event.is_set()

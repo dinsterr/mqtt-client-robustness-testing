@@ -1,8 +1,10 @@
 import argparse
 import os
+import threading
 import time
 
-from broker.listeners import *
+from broker.client_manager import ClientManager
+from broker.listener import *
 from broker.subscription_manager import SubscriptionManager
 from util.configreader import BrokerConfigReader as ConfigReader
 
@@ -16,7 +18,8 @@ if __name__ == "__main__":
 
     # argument parser
     parser = argparse.ArgumentParser("broker.py", description="MQTT Broker supporting Multilateral Security",
-                                     epilog="Developed by Babbadeckl. Questions and Bug-reports can be mailed to korbinian.spielvogel@uni-passau.de")
+                                     epilog="Developed by Babbadeckl. Questions and Bug-reports can be mailed to "
+                                            "korbinian.spielvogel@uni-passau.de")
     # argument for config file
     parser.add_argument('-c', '--config', default=CONFIG_PATH, type=str, dest="config",
                         metavar="PATH", help="location of the config file for the broker")
@@ -49,7 +52,7 @@ if __name__ == "__main__":
                                       subscription_manager=subscription_manager, client_manager=client_manager))
     except SyntaxError:
         logger.logging.error(
-            f"Listener config for port {listener_config.port} is invalid. Please specify CACERT, CERTFILE and KEYFILE.")
+            f"Listener config port is invalid.")
         exit(0)
     except ValueError:
         logger.logging.error(f"Listener config object is invalid. Something went terribly wrong.")

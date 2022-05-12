@@ -21,7 +21,8 @@ class MQTTPacketManager(object):
         remaining_length = packet[1]
         if logger.DEBUG:
             logger.logging.debug(
-                f"\tControl_packet_type: {enums.PacketIdentifer(control_packet_type)} with flags: {control_packet_flags} and remaining length: {remaining_length}")
+                f"\tControl_packet_type: {enums.PacketIdentifer(control_packet_type)} with flags: "
+                f"{control_packet_flags} and remaining length: {remaining_length}")
         if enums.PacketIdentifer(control_packet_type) == enums.PacketIdentifer.CONNECT:
             return MQTTPacketManager.parse_connect(packet[2:], remaining_length)
         elif enums.PacketIdentifer(control_packet_type) == enums.PacketIdentifer.PUBLISH:
@@ -95,7 +96,8 @@ class MQTTPacketManager(object):
     @staticmethod
     def parse_disconnect():
         """
-        Parse the DISCONNECT message according to the MQTTv5.0 specification Chapter 3.14 DISCONNECT - Disconnect notification.
+        Parse the DISCONNECT message according to the
+        MQTTv5.0 specification Chapter 3.14 DISCONNECT - Disconnect notification.
         :return: a dictionary containing meaningful values of the received packet
         """
         parsed_msg = {'identifier': enums.PacketIdentifer.DISCONNECT}
@@ -111,15 +113,16 @@ class MQTTPacketManager(object):
         :param client_address: address of the publishing client
         :param packet: the raw bytes packet that was received
         :param remaining_length: remaining length of the packet
-        :return: a dictionary containing meaningful values of the received packet (identifier, topic, properties, payload)
+        :return: a dictionary containing meaningful values of the received packet
+                (identifier, topic, properties, payload)
         """
         parsed_msg = {'identifier': enums.PacketIdentifer.PUBLISH, 'raw_packet': packet}
         current_pos = 2
         current_pos, parsed_msg['topic'] = MQTTPacketManager.extract_topic(packet, current_pos)
         parsed_msg['properties'] = {}
 
-        if client_manager.get_user_properties(client_socket, client_address)[
-            enums.Properties.Version] == enums.Version.MQTTv5.value:
+        if client_manager.get_user_properties(client_socket, client_address)[enums.Properties.Version] \
+                == enums.Version.MQTTv5.value:
             current_pos, properties = MQTTPacketManager.extract_properties(packet, current_pos)
             if len(properties) != 0:
                 for user_property in properties:
@@ -138,15 +141,16 @@ class MQTTPacketManager(object):
         :param client_address: address of the publishing client
         :param packet: the raw bytes packet that was received
         :param remaining_length: remaining length of the packet
-        :return: a dictionary containing meaningful values of the received packet (identifier, packet_identifier, properties, topic, options)
+        :return: a dictionary containing meaningful values of the received packet
+                (identifier, packet_identifier, properties, topic, options)
         """
         parsed_msg = {'identifier': enums.PacketIdentifer.SUBSCRIBE}
         current_pos = 0
         current_pos, parsed_msg['packet_identifier'] = MQTTPacketManager.extract_packet_identifier(packet, current_pos)
         parsed_msg['properties'] = {}
 
-        if client_manager.get_user_properties(client_socket, client_address)[
-            enums.Properties.Version] == enums.Version.MQTTv5.value:
+        if client_manager.get_user_properties(client_socket, client_address)[enums.Properties.Version] \
+                == enums.Version.MQTTv5.value:
             current_pos, properties = MQTTPacketManager.extract_subscribe_properties(packet, current_pos)
             if len(properties) != 0:
                 for user_property in properties:
@@ -193,7 +197,8 @@ class MQTTPacketManager(object):
     @staticmethod
     def extract_subscribe_properties(packet, position):
         """
-        Extract all Subscribe properties from the received packet according to the MQTTv5.0 specification Chapter 3.8.2.1 SUBSCRIBE Properties
+        Extract all Subscribe properties from the received packet according to the
+        MQTTv5.0 specification Chapter 3.8.2.1 SUBSCRIBE Properties
         :param packet: the received packet from the client
         :param position: current byte position in the packet
         :return: updated position and the properties in form of a dictionary
@@ -231,8 +236,10 @@ class MQTTPacketManager(object):
                         f"\t\tFirst: length: {length_first_user_property}, UserProperty: {first_user_property}")
                     logger.logging.debug(
                         f"\t\tSecond: length: {length_second_user_property}, UserProperty: {second_user_property}")
+
+                    values = 5 + length_first_user_property + length_second_user_property
                     logger.logging.debug(f"\t\tCurrentbyte: {current_pos}, Maxbyte: {max_byte} ... values: "
-                                         f"{5 + length_first_user_property + length_second_user_property}/{property_length}")
+                                         f"{values}/{property_length}")
 
             # Extract Subscription Identifier
             elif identifier == enums.Properties.SubscriptionIdentifier:
@@ -250,7 +257,8 @@ class MQTTPacketManager(object):
     @staticmethod
     def extract_subscribe_options(packet, position):
         """
-        Extract all Subscribe options from the received packet according to the MQTTv5.0 specification Chapter 3.8.3.1 Subscription Options
+        Extract all Subscribe options from the received packet according to the
+        MQTTv5.0 specification Chapter 3.8.3.1 Subscription Options
         :param packet: the received packet from the client
         :param position: current byte position in the packet
         :return: updated position and the option flags (byte)
@@ -262,7 +270,8 @@ class MQTTPacketManager(object):
     @staticmethod
     def extract_packet_identifier(packet, position):
         """
-        Extract the Subscribe packet identifier from the received packet according to the MQTTv5.0 specification Chapter 3.8.2 SUBSCRIBE Variable Header
+        Extract the Subscribe packet identifier from the received packet according to the
+        MQTTv5.0 specification Chapter 3.8.2 SUBSCRIBE Variable Header
         :param packet: the received packet from the client
         :param position: current byte position in the packet
         :return: updated position and the packet identifier
@@ -279,7 +288,8 @@ class MQTTPacketManager(object):
     @staticmethod
     def extract_topic(packet, position):
         """
-        Extract the Topic from SUBSCRIBE and PUBLISH packets according to the MQTTv5.0 specification Chapter 3.3.2.1 Topic Name and 3.8.3 SUBSCRIBE Payload
+        Extract the Topic from SUBSCRIBE and PUBLISH packets according to the
+        MQTTv5.0 specification Chapter 3.3.2.1 Topic Name and 3.8.3 SUBSCRIBE Payload
         :param packet: the received packet from the client
         :param position: current byte position in the packet
         :return: updated position and the topic
@@ -366,7 +376,8 @@ class MQTTPacketManager(object):
 
         if logger.DEBUG:
             logger.logging.debug(
-                f"\tConnect flags: username_flag: {username_flag}, password_flag: {password_flag}, will_retain: {will_retain}"
+                f"\tConnect flags: username_flag: {username_flag}, password_flag: {password_flag}, will_retain: "
+                f"{will_retain}"
                 f"will_qos: {will_qos}, will_flag: {will_flag}, clean_start: {clean_start}")
 
         position += 1
@@ -432,8 +443,9 @@ class MQTTPacketManager(object):
                     f"\t\tFirst: length: {length_first_user_property}, UserProperty: {first_user_property}")
                 logger.logging.debug(
                     f"\t\tSecond: length: {length_second_user_property}, UserProperty: {second_user_property}")
+                values = 5 + length_first_user_property + length_second_user_property
                 logger.logging.debug(f"\t\tCurrentbyte: {current_pos}, Maxbyte: {max_byte} ... values: "
-                                     f"{5 + length_first_user_property + length_second_user_property}/{property_length}")
+                                     f"{values}/{property_length}")
 
         return current_pos, properties
 
