@@ -8,7 +8,7 @@ from broker.listener import *
 from broker.listener.listener import Listener
 from broker.subscription_manager import SubscriptionManager
 from util import logger
-from util.configreader import BrokerConfigReader as ConfigReader
+from util.config_reader import BrokerConfigReader as ConfigReader
 
 if __name__ == "__main__":
     # Listeners

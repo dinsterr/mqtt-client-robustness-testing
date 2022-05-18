@@ -1,3 +1,5 @@
+import time
+
 from broker.listener.client_thread import ClientThread
 from packets import enums
 from util import logger
@@ -5,33 +7,17 @@ from util.exceptions import MQTTMessageNotSupportedException, IncorrectProtocolO
 
 
 class AutoPublishClientThread(ClientThread):
-    def __init__(self, client_socket, client_address, listener, subscription_manager, client_manager, debug):
+    def __init__(self, client_socket, client_address, listener, subscription_manager, client_manager, auto_publish_interval, debug):
         super().__init__(client_socket, client_address, listener, subscription_manager, client_manager, debug)
+        self._auto_publish_interval = auto_publish_interval
 
+    # TODO: rename (e.g. run)
     def listen(self):
-        """
-        Listen on the client socket for incoming messages and handle the different MQTT messages
-        """
         try:
-            self._client_manager.add_status(self.client_socket, self.client_address, enums.Status.FRESH)
-            connected = False
             while self._running:
-                if not connected:
-                    msg = self.client_socket.recv(1024)
-                    if len(msg) > 0:
-                        if msg['identifier'] == enums.PacketIdentifer.CONNECT:
-                            self.log_received_packet(msg, msg, self.client_id)
-                            self.handle_connect(msg)
-                            connected = True
-                        elif msg['identifier'] == enums.PacketIdentifer.PINGREQ:
-                            self.log_received_packet(msg, msg, self.client_id)
-                            self.handle_pingreq(msg)
-                        elif msg['identifier'] == enums.PacketIdentifer.SUBSCRIBE:
-                            self.log_received_packet(msg, msg, self.client_id)
-                            self.handle_subscribe(msg)
-
-                else:
-                    self.publish()
+                self.publish()
+                # TODO: benchmark speed
+                time.sleep(self._auto_publish_interval)
         except OSError:
             pass
         except MQTTMessageNotSupportedException as e:
