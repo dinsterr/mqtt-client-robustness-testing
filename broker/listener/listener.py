@@ -1,14 +1,15 @@
 import socket
 
 import util.logger as logger
-from broker.client_thread import ClientThread
+from broker.listener.auto_publish_client_thread import AutoPublishClientThread
+from broker.listener.client_thread import ClientThread
 
 ALLOWED_CONNECTIONS = 10
 
 
 class Listener(object):
     """
-    MQTT Listener. No security mechanisms in place.
+    MQTT Listener.
     """
 
     def __init__(self, config, subscription_manager, client_manager, ip, debug=0):
@@ -20,6 +21,7 @@ class Listener(object):
         """
         self._ip = ip
         self._port = config.port
+        self._auto_publish = config.auto_publish
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self._ip, self._port))
@@ -43,8 +45,14 @@ class Listener(object):
             try:
                 client_socket, client_address = self.sock.accept()
                 if client_socket and client_address:
-                    client_thread = ClientThread(client_socket, client_address, self, self._subscription_manager,
-                                                 self._client_manager, self.debug)
+                    # TODO: Use a factory
+                    if self._auto_publish:
+                        client_thread = AutoPublishClientThread(client_socket, client_address, self,
+                                                                self._subscription_manager, self._client_manager,
+                                                                self.debug)
+                    else:
+                        client_thread = ClientThread(client_socket, client_address, self, self._subscription_manager,
+                                                     self._client_manager, self.debug)
                     self.open_sockets[client_address] = client_thread
                     client_thread.setDaemon(True)
                     client_thread.start()

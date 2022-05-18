@@ -10,6 +10,9 @@ from gmqtt import Client as MQTTClient
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 STOP = asyncio.Event()
+DEFAULT_HOSTNAME = "localhost"
+DEFAULT_PORT = 1883
+AUTO_PUBLISH_SLEEP_INTERVAL = 3
 
 
 def on_connect(client, flags, rc, properties):
@@ -37,38 +40,46 @@ def ask_exit(*args):
     STOP.set()
 
 
-async def main(args):
+def main(args):
     """
     Main function of the program. Initiates the publishing process of the Client.
     :param args: arguments provided via CLI
     """
 
-    logging.info(f"Connecting you to {args.host} on Port {args.port}. Your clientID: '{args.client_id}'. "
-                 f"Multilateral Security for all messages {'is' if args.multilateral else 'is not'} enabled.")
+    logging.info(f"Connecting you to {args.host} on Port {args.port}. Your clientID: '{args.client_id}'.")
 
-    user_property = ('multilateral', '1') if args.multilateral else None
-    if user_property:
-        client = MQTTClient(args.client_id, user_property=user_property)
-    else:
-        client = MQTTClient(args.client_id)
+    loop = asyncio.get_event_loop()
+    loop.add_signal_handler(signal.SIGINT, ask_exit)
+    loop.add_signal_handler(signal.SIGTERM, ask_exit)
+    task = loop.create_task(publish_loop(args.client_id, args.host, args.port, args.topic, args.message))
+
+    try:
+        loop.run_until_complete(task)
+    except (ConnectionRefusedError, KeyboardInterrupt, RuntimeError):
+        logging.info("Closing the client.")
+
+
+async def publish_loop(client_id, host, port, topic, message):
+    client = MQTTClient(client_id)
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
-    await client.connect(host=args.host, port=args.port)
-    client.publish(args.topic, args.message, qos=0)
+    await client.connect(host=host, port=port)
 
-    await STOP.wait()
     try:
-        await client.disconnect(session_expiry_interval=0)
-    except ConnectionResetError:
-        logging.info("Broker successfully closed the connection.")
+        while not STOP.is_set():
+            logging.info("[PUBLISHING]")
+            if client.is_connected:
+                client.publish(topic, message, qos=0)
+
+            await asyncio.sleep(AUTO_PUBLISH_SLEEP_INTERVAL)
+    finally:
+        await client.disconnect()
 
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-    HOSTNAME = "localhost"
-    PORT = 1883
     CLIENT_ID = str(random.randint(0, 50000))
 
     # argument parser
@@ -80,12 +91,12 @@ if __name__ == '__main__':
                         help=f"Client identifier. Defaults to random int.")
 
     # argument for host
-    parser.add_argument('-H', '--host', default=HOSTNAME, type=str, dest="host", metavar="HOST",
-                        help=f"MQTT host to connect to. Defaults to {HOSTNAME}.")
+    parser.add_argument('-H', '--host', default=DEFAULT_HOSTNAME, type=str, dest="host", metavar="HOST",
+                        help=f"MQTT host to connect to. Defaults to {DEFAULT_HOSTNAME}.")
 
     # argument for port
-    parser.add_argument('-p', '--port', default=PORT, type=int, dest="port", metavar="PORT",
-                        help=f"Network port to connect to. Defaults to {PORT}.")
+    parser.add_argument('-p', '--port', default=DEFAULT_PORT, type=int, dest="port", metavar="PORT",
+                        help=f"Network port to connect to. Defaults to {DEFAULT_PORT}.")
 
     # argument for topic
     parser.add_argument('-t', '--topic', type=str, dest="topic", metavar="TOPIC", help="MQTT topic to publish to.")
@@ -94,12 +105,4 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--message', type=str, dest="message", metavar="MESSAGE", help="Message payload to send.")
 
     args = parser.parse_args()
-
-    try:
-        loop = asyncio.get_event_loop()
-        loop.add_signal_handler(signal.SIGINT, ask_exit)
-        loop.add_signal_handler(signal.SIGTERM, ask_exit)
-
-        loop.run_until_complete(main(args))
-    except (KeyboardInterrupt, RuntimeError):
-        logging.info("Closing the client.")
+    main(args)
