@@ -5,7 +5,9 @@ import time
 
 from broker.client_manager import ClientManager
 from broker.listener import *
+from broker.listener.listener import Listener
 from broker.subscription_manager import SubscriptionManager
+from util import logger
 from util.configreader import BrokerConfigReader as ConfigReader
 
 if __name__ == "__main__":
@@ -52,7 +54,7 @@ if __name__ == "__main__":
                                       subscription_manager=subscription_manager, client_manager=client_manager))
     except SyntaxError:
         logger.logging.error(
-            f"Listener config port is invalid.")
+            f"Listener config is invalid.")
         exit(0)
     except ValueError:
         logger.logging.error(f"Listener config object is invalid. Something went terribly wrong.")

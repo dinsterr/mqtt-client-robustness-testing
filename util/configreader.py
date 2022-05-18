@@ -72,6 +72,8 @@ class BrokerConfigReader(object):
             identifier = setting[0]
             try:
                 value = BrokerConfigReader.handle_config_value(identifier, setting[1].lower().strip())
+                if identifier == "AUTO_PUBLISH":
+                    listenerconfig.auto_publish = value
             except FileNotFoundError:
                 print(
                     f"An error has occurred at the value of your setting '{identifier}'. "
@@ -105,6 +107,13 @@ class BrokerConfigReader(object):
                 return int(value)
             except TypeError:
                 print(f"An error occurred while parsing the Port value. '{value}' is not a valid Port.")
+        elif identifier == "AUTO_PUBLISH":
+            if value.lower() in ['true', '1', 't', 'y', 'yes']:
+                return 1
+            elif value.lower() in ['false', '0', 'f', 'n', 'no']:
+                return 0
+            else:
+                raise ValueError
         else:
             raise SyntaxError
 
@@ -116,6 +125,7 @@ class ListenerConfig(object):
 
     def __init__(self):
         self._port = 1883  # Port for the listener
+        self._auto_publish = 0
 
     def __str__(self):
         """
@@ -131,3 +141,11 @@ class ListenerConfig(object):
     @port.setter
     def port(self, value):
         self._port = value
+
+    @property
+    def auto_publish(self):
+        return self._auto_publish
+
+    @auto_publish.setter
+    def auto_publish(self, value):
+        self._auto_publish = value

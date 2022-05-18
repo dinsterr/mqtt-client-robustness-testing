@@ -16,6 +16,7 @@ class ClientThread(threading.Thread):
         self.client_socket = client_socket
         self.client_address = client_address
         self._running = True
+
         self._stop_event = threading.Event()
         self.listener = listener
         self._subscription_manager = subscription_manager
@@ -125,29 +126,7 @@ class ClientThread(threading.Thread):
             while self._running:
                 msg = self.client_socket.recv(1024)
                 if len(msg) > 0:
-                    if logger.DEBUG:
-                        logger.logging.debug(f"Received raw message on Port {self.listener.port}: {msg}")
-                    parsed_msg = MQTTPacketManager.parse_packet(msg, self.client_socket, self.client_address,
-                                                                self._client_manager)
-                    if parsed_msg['identifier'] == enums.PacketIdentifer.CONNECT:
-                        self.log_received_packet(msg, parsed_msg)
-                        self.handle_connect(parsed_msg)
-                    elif parsed_msg['identifier'] == enums.PacketIdentifer.PUBLISH:
-                        self.log_received_packet(msg, parsed_msg)
-                        self.handle_publish(parsed_msg)
-                    elif parsed_msg['identifier'] == enums.PacketIdentifer.SUBSCRIBE:
-                        self.log_received_packet(msg, parsed_msg)
-                        self.handle_subscribe(parsed_msg)
-                    elif parsed_msg['identifier'] == enums.PacketIdentifer.PINGREQ:
-                        self.log_received_packet(msg, parsed_msg)
-                        self.handle_pingreq(parsed_msg)
-                    elif parsed_msg['identifier'] == enums.PacketIdentifer.DISCONNECT:
-                        self.log_received_packet(msg, parsed_msg)
-                        self.handle_disconnect(parsed_msg)
-                    else:
-                        raise MQTTMessageNotSupportedException(
-                            f'Client {self.client_address} sent a message with identifier: '
-                            f'`{parsed_msg["identifier"]}`. Not supported, therefore ignored!')
+                    self.process_msg(msg)
         except OSError:
             pass
         except MQTTMessageNotSupportedException as e:
@@ -156,9 +135,34 @@ class ClientThread(threading.Thread):
             logger.logging.error(e)
             self.close()
 
-    def log_received_packet(self, msg, parsed_msg):
+    def process_msg(self, msg):
+        if logger.DEBUG:
+            logger.logging.debug(f"Received raw message on Port {self.listener.port}: {msg}")
+        parsed_msg = MQTTPacketManager.parse_packet(msg, self.client_socket, self.client_address,
+                                                    self._client_manager)
+        if parsed_msg['identifier'] == enums.PacketIdentifer.CONNECT:
+            self.log_received_packet(msg, parsed_msg, parsed_msg['client_id'])
+            self.handle_connect(parsed_msg)
+        elif parsed_msg['identifier'] == enums.PacketIdentifer.PUBLISH:
+            self.log_received_packet(msg, parsed_msg, self.client_id)
+            self.handle_publish(parsed_msg)
+        elif parsed_msg['identifier'] == enums.PacketIdentifer.SUBSCRIBE:
+            self.log_received_packet(msg, parsed_msg, self.client_id)
+            self.handle_subscribe(parsed_msg)
+        elif parsed_msg['identifier'] == enums.PacketIdentifer.PINGREQ:
+            self.log_received_packet(msg, parsed_msg, self.client_id)
+            self.handle_pingreq(parsed_msg)
+        elif parsed_msg['identifier'] == enums.PacketIdentifer.DISCONNECT:
+            self.log_received_packet(msg, parsed_msg, self.client_id)
+            self.handle_disconnect(parsed_msg)
+        else:
+            raise MQTTMessageNotSupportedException(
+                f'Client {self.client_address} sent a message with identifier: '
+                f'`{parsed_msg["identifier"]}`. Not supported, therefore ignored!')
+
+    def log_received_packet(self, msg, parsed_msg, client_id):
         logger.logging.info(
-            f"Received {parsed_msg['identifier'].name} message from Client {parsed_msg['client_id']}"
+            f"Received {parsed_msg['identifier'].name} message from Client {client_id}"
             f" on Port {self.listener.port}: {msg}")
 
     def close(self):
