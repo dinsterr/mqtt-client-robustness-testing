@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/../malicious-mqtt-broker/.idea/MaliciousMQTTBroker.iml" filepath="$PROJECT_DIR$/../malicious-mqtt-broker/.idea/MaliciousMQTTBroker.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../autopublish-mqtt-broker/.idea/AutoPublishMQTTBroker.iml" filepath="$PROJECT_DIR$/../autopublish-mqtt-broker/.idea/AutoPublishMQTTBroker.iml" />
     </modules>
   </component>
 </project>
