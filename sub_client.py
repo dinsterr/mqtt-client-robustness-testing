@@ -101,6 +101,7 @@ if __name__ == '__main__':
     HOSTNAME = "localhost"
     PORT = 1883
     CLIENT_ID = str(random.randint(0, 50000))
+    TOPIC = "foo"
 
     # argument parser
     parser = argparse.ArgumentParser("client_pub", description="MQTT Subscribe client supporting Multilateral Security",
@@ -119,7 +120,7 @@ if __name__ == '__main__':
                         help=f"Network port to connect to. Defaults to {PORT}.")
 
     # argument for topic
-    parser.add_argument('-t', '--topic', type=str, dest="topic", metavar="TOPIC", help="MQTT topic to subscribe to.")
+    parser.add_argument('-t', '--topic', default=TOPIC, type=str, dest="topic", metavar="TOPIC", help="MQTT topic to subscribe to.")
 
     args = parser.parse_args()
 

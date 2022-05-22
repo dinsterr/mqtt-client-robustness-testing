@@ -24,6 +24,7 @@ class Listener(object):
         self._port = config.port
         self._is_auto_publish = config.is_auto_publish
         self._auto_publish_interval = config.auto_publish_interval
+        self._message_generator_config = config._message_generator_config
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self._ip, self._port))
@@ -53,10 +54,14 @@ class Listener(object):
                     client_thread.setDaemon(True)
                     client_thread.start()
 
+                    # TODO: high load if error in publishing thread?
+                    # TODO: socket is not closed if client thread dies
+                    # TODO: auto publishing is not started if the subscriber auto-reconnects
                     if self._is_auto_publish:
                         client_thread = AutoPublishClientThread(client_socket, client_address, self,
                                                                 self._subscription_manager, self._client_manager,
-                                                                self._auto_publish_interval, self.debug)
+                                                                self._auto_publish_interval,
+                                                                self._message_generator_config, self.debug)
                         # TODO: how to store open socket?
                         client_thread.setDaemon(True)
                         client_thread.start()

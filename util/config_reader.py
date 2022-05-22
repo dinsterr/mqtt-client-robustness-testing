@@ -1,3 +1,5 @@
+from message_generator import MessageGeneratorConfig
+
 LISTENER_IDENTIFIER = "[LISTENER]"
 COMMENT_IDENTIFIER = "#"
 
@@ -71,11 +73,16 @@ class BrokerConfigReader(object):
             setting = setting.strip().split()
             identifier = setting[0]
             try:
-                value = BrokerConfigReader.handle_config_value(identifier, setting[1].lower().strip())
+                # TODO: find a more flexible way to define config properties
+                value = BrokerConfigReader.handle_config_value(identifier, setting[1].strip())
                 if identifier == "AUTO_PUBLISH":
                     listenerconfig._is_auto_publish = value
                 elif identifier == "AUTO_PUBLISH_INTERVAL":
                     listenerconfig._auto_publish_interval = value
+                elif identifier == "MESSAGE_GENERATOR_TYPE":
+                    listenerconfig._message_generator_config.generator_type = value
+                elif identifier == "MESSAGE_GENERATOR_TOPIC":
+                    listenerconfig._message_generator_config.topic = value
             except FileNotFoundError:
                 print(
                     f"An error has occurred at the value of your setting '{identifier}'. "
@@ -119,6 +126,8 @@ class BrokerConfigReader(object):
         elif identifier == "AUTO_PUBLISH_INTERVAL":
             # Raises a ValueError if cast is not possible
             return float(value)
+        elif identifier == "MESSAGE_GENERATOR_TYPE" or identifier == "MESSAGE_GENERATOR_TOPIC":
+            return value
         else:
             raise SyntaxError
 
@@ -132,6 +141,7 @@ class ListenerConfig(object):
         self._port = 1883  # Port for the listener
         self._is_auto_publish = False
         self._auto_publish_interval = 5
+        self._message_generator_config: MessageGeneratorConfig = MessageGeneratorConfig()
 
     def __str__(self):
         """
