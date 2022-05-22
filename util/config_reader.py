@@ -72,6 +72,10 @@ class BrokerConfigReader(object):
             identifier = setting[0]
             try:
                 value = BrokerConfigReader.handle_config_value(identifier, setting[1].lower().strip())
+                if identifier == "AUTO_PUBLISH":
+                    listenerconfig._is_auto_publish = value
+                elif identifier == "AUTO_PUBLISH_INTERVAL":
+                    listenerconfig._auto_publish_interval = value
             except FileNotFoundError:
                 print(
                     f"An error has occurred at the value of your setting '{identifier}'. "
@@ -105,6 +109,16 @@ class BrokerConfigReader(object):
                 return int(value)
             except TypeError:
                 print(f"An error occurred while parsing the Port value. '{value}' is not a valid Port.")
+        elif identifier == "AUTO_PUBLISH":
+            if value.lower() in ['true', '1', 't', 'y', 'yes']:
+                return True
+            elif value.lower() in ['false', '0', 'f', 'n', 'no']:
+                return False
+            else:
+                raise ValueError
+        elif identifier == "AUTO_PUBLISH_INTERVAL":
+            # Raises a ValueError if cast is not possible
+            return float(value)
         else:
             raise SyntaxError
 
@@ -116,6 +130,8 @@ class ListenerConfig(object):
 
     def __init__(self):
         self._port = 1883  # Port for the listener
+        self._is_auto_publish = False
+        self._auto_publish_interval = 5
 
     def __str__(self):
         """
@@ -131,3 +147,19 @@ class ListenerConfig(object):
     @port.setter
     def port(self, value):
         self._port = value
+
+    @property
+    def is_auto_publish(self):
+        return self._is_auto_publish
+
+    @is_auto_publish.setter
+    def is_auto_publish(self, value):
+        self._is_auto_publish = value
+
+    @property
+    def auto_publish_interval(self):
+        return self._auto_publish_interval
+
+    @auto_publish_interval.setter
+    def auto_publish_interval(self, value):
+        self._auto_publish_interval = value

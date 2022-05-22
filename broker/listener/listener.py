@@ -1,17 +1,19 @@
 import socket
 
 import util.logger as logger
-from broker.client_thread import ClientThread
+from broker.listener.auto_publish_client_thread import AutoPublishClientThread
+from broker.listener.client_thread import ClientThread
+from util.config_reader import ListenerConfig
 
 ALLOWED_CONNECTIONS = 10
 
 
 class Listener(object):
     """
-    MQTT Listener. No security mechanisms in place.
+    MQTT Listener.
     """
 
-    def __init__(self, config, subscription_manager, client_manager, ip, debug=0):
+    def __init__(self, config: ListenerConfig, subscription_manager, client_manager, ip, debug=0):
         """
         Constructor for the MQTT Listener
         :param config: contains the initialized config setting
@@ -20,6 +22,8 @@ class Listener(object):
         """
         self._ip = ip
         self._port = config.port
+        self._is_auto_publish = config.is_auto_publish
+        self._auto_publish_interval = config.auto_publish_interval
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self._ip, self._port))
@@ -48,6 +52,14 @@ class Listener(object):
                     self.open_sockets[client_address] = client_thread
                     client_thread.setDaemon(True)
                     client_thread.start()
+
+                    if self._is_auto_publish:
+                        client_thread = AutoPublishClientThread(client_socket, client_address, self,
+                                                                self._subscription_manager, self._client_manager,
+                                                                self._auto_publish_interval, self.debug)
+                        # TODO: how to store open socket?
+                        client_thread.setDaemon(True)
+                        client_thread.start()
             except ConnectionAbortedError:
                 logger.logging.info("Closed socket connection of Listener.")
 
