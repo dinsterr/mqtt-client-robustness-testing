@@ -12,13 +12,12 @@ class AutoPublishClientThread(ClientThread):
         super().__init__(client_socket, client_address, listener, subscription_manager, client_manager, debug)
         self._auto_publish_interval = auto_publish_interval
         self._message_generator = MessageGenerator(generator_config)
+        self._generator_config = generator_config
 
-    # TODO: rename (e.g. run)
-    def listen(self):
+    def run(self):
         try:
             while self._running:
                 self.publish()
-                # TODO: benchmark speed
                 time.sleep(self._auto_publish_interval)
         except OSError:
             pass
@@ -29,9 +28,9 @@ class AutoPublishClientThread(ClientThread):
             self.close()
 
     def publish(self):
-        # TODO: allow configuration of MQTT packet and actually use the topic
         topic = 'foo'
         msg = next(self._message_generator)
+        # TODO: send message to current client_socket instead of a target subscribed
         for sub in self._subscription_manager.get_topic_subscribers(topic):
             logger.logging.info(
                 f"Sent publish message '{msg}' in '{topic}' to Client {sub['client_id']}")

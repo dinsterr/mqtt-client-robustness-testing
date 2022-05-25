@@ -173,3 +173,7 @@ class ListenerConfig(object):
     @auto_publish_interval.setter
     def auto_publish_interval(self, value):
         self._auto_publish_interval = value
+
+    @property
+    def message_generator_config(self):
+        return self._message_generator_config
