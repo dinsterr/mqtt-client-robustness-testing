@@ -13,20 +13,14 @@ class MessageGenerator(object):
 
     def __new__(cls, generator_config):
         # Uses a factory pattern to create a MessageGenerator of type 'generator_type'
+        # Available classes are dynamically pulled from the 'broker.message_generators'
         for subclass in MessageGenerator.__subclasses__():
             if generator_config.generator_type and generator_config.generator_type == subclass._GENERATOR_TYPE:
                 self = object.__new__(subclass)
+                self._generator_config = generator_config
                 return self
-        raise ValueError(f"Failed to find a valid generator of type '{generator_config.generator_type}'!")
+        raise ModuleNotFoundError(f"Failed to find a valid generator of type '{generator_config.generator_type}'!")
 
     @abstractmethod
     def __next__(self):
         pass
-
-
-class HelloWorldMessageGenerator(MessageGenerator):
-    _GENERATOR_TYPE = "HELLO_WORLD"
-
-    def __next__(self):
-        # TODO: allow detailed configuration of the message (e.g. setting the topic, qos, etc.)
-        return b'0\x11\x00\x03foo\x00hello world'

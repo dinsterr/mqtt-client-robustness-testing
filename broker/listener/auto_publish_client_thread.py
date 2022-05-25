@@ -1,7 +1,7 @@
 import time
 
 from broker.listener.client_thread import ClientThread
-from message_generator import MessageGenerator
+from broker.message_generators.message_generator import MessageGenerator
 from util import logger
 from util.exceptions import MQTTMessageNotSupportedException, IncorrectProtocolOrderException
 

@@ -1,4 +1,4 @@
-from message_generator import MessageGeneratorConfig
+from broker.message_generators.message_generator import MessageGeneratorConfig
 
 LISTENER_IDENTIFIER = "[LISTENER]"
 COMMENT_IDENTIFIER = "#"
