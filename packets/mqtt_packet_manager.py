@@ -95,6 +95,10 @@ class MQTTPacketManager(object):
 
     @staticmethod
     def prepare_publish(topic, payload):
+        """
+        Prepare the PUBLISH message according to the MQTTv5.0 specification Chapter 3.3 PUBLISH – Publish message. Also
+        supports MQTTv3.1.1.
+        """
         # fixed header
         control_packet_type = enums.PacketIdentifer.PUBLISH.value
         dup = 0x0
@@ -116,6 +120,7 @@ class MQTTPacketManager(object):
         remaining_length += encoded_payload_length
         # TODO: fails for big payloads and some of the fields might be calculated incorrectly
         #  (e.g. weird behavior with unicode)
+        #  - Struct pack for 's' allows a max of 255 bytes -> split
         return struct.pack(f'>BBH{topic_length}sB{encoded_payload_length}s', fixed_header, remaining_length,
                            topic_length, topic_name, packet_identifier, encoded_payload)
 
