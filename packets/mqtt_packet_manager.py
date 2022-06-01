@@ -94,6 +94,60 @@ class MQTTPacketManager(object):
         return struct.pack('>BBHBB', fixed_header, remaining_length, packet_identifier, property_length, payload)
 
     @staticmethod
+    def prepare_publish(topic, payload):
+        # fixed header
+        control_packet_type = enums.PacketIdentifer.PUBLISH.value
+        dup = 0x0
+        qos = 0x0
+        retain = 0x0
+        fixed_header = control_packet_type << 4 | dup & 0x1 << 3 | qos << 1 | retain & 0x1
+        remaining_length = 2
+
+        # variable header
+        topic_name = bytes(topic.encode('utf-8'))
+        topic_length = len(topic_name)
+        remaining_length += topic_length
+
+        packet_identifier = 0
+        remaining_length += 1
+
+        encoded_payload = bytes(payload.encode('utf-8'))
+        encoded_payload_length = len(encoded_payload)
+        remaining_length += encoded_payload_length
+        # TODO: fails for big payloads and some of the fields might be calculated incorrectly
+        #  (e.g. weird behavior with unicode)
+        return struct.pack(f'>BBH{topic_length}sB{encoded_payload_length}s', fixed_header, remaining_length,
+                           topic_length, topic_name, packet_identifier, encoded_payload)
+
+    @staticmethod
+    def parse_publish(packet, remaining_length, client_socket, client_address, client_manager):
+        """
+        Parse the PUBLISH message according to the MQTTv5.0 specification Chapter 3.3 PUBLISH – Publish message. Also
+        supports MQTTv3.1.1.
+        :param client_manager: manager of the client connections (@ClientManager)
+        :param client_socket: socket of the publishing client
+        :param client_address: address of the publishing client
+        :param packet: the raw bytes packet that was received
+        :param remaining_length: remaining length of the packet
+        :return: a dictionary containing meaningful values of the received packet
+                (identifier, topic, properties, payload)
+        """
+        parsed_msg = {'identifier': enums.PacketIdentifer.PUBLISH, 'raw_packet': packet}
+        current_pos = 2
+        current_pos, parsed_msg['topic'] = MQTTPacketManager.extract_topic(packet, current_pos)
+        parsed_msg['properties'] = {}
+
+        if client_manager.get_user_properties(client_socket, client_address)[enums.Properties.Version] \
+                == enums.Version.MQTTv5.value:
+            current_pos, properties = MQTTPacketManager.extract_properties(packet, current_pos)
+            if len(properties) != 0:
+                for user_property in properties:
+                    parsed_msg['properties'][user_property] = properties[user_property]
+
+        current_pos, parsed_msg['payload'] = MQTTPacketManager.extract_publish_payload(packet, current_pos)
+        return parsed_msg
+
+    @staticmethod
     def parse_disconnect():
         """
         Parse the DISCONNECT message according to the

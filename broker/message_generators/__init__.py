@@ -1,15 +1,14 @@
 # Sourced from: https://julienharbulot.com/python-dynamical-import.html
 
-from inspect import isclass
-from pkgutil import iter_modules
-from pathlib import Path
 from importlib import import_module
+from inspect import isclass
+from pathlib import Path
+from pkgutil import iter_modules
 
+from broker.message_generators.message_generator import MessageGenerator as BaseClass
 
 # iterate through the modules in the current package
 # import all subclasses of MessageGenerator
-
-from broker.message_generators.message_generator import MessageGenerator as BaseClass
 
 package_dir = Path(__file__).resolve().parent
 for (_, module_name, _) in iter_modules([package_dir]):
