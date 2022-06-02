@@ -4,6 +4,19 @@ import packets.enums as enums
 import util.logger as logger
 
 
+# source: https://github.com/wialon/gmqtt/blob/afe79bfa89990c58ca0fb638e107290745d491a8/gmqtt/mqtt/utils.py#L61
+def pack_variable_byte_integer(value):
+    remaining_bytes = bytearray()
+    while True:
+        value, b = divmod(value, 128)
+        if value > 0:
+            b |= 0x80
+        remaining_bytes.extend(struct.pack('!B', b))
+        if value <= 0:
+            break
+    return remaining_bytes
+
+
 class MQTTPacketManager(object):
     @staticmethod
     def parse_packet(packet, client_socket, client_address, client_manager):
@@ -98,13 +111,15 @@ class MQTTPacketManager(object):
         """
         Prepare the PUBLISH message according to the MQTTv5.0 specification Chapter 3.3 PUBLISH – Publish message. Also
         supports MQTTv3.1.1.
+        We allow any payload size, even if it exceeds the MQTT specification limit.
         """
+
         # fixed header
         control_packet_type = enums.PacketIdentifer.PUBLISH.value
         dup = 0x0
         qos = 0x0
         retain = 0x0
-        fixed_header = control_packet_type << 4 | dup & 0x1 << 3 | qos << 1 | retain & 0x1
+        fixed_header = control_packet_type << 4 | ((dup & 0x1) << 3) | (qos << 1) | (retain & 0x1)
         remaining_length = 2
 
         # variable header
@@ -115,14 +130,18 @@ class MQTTPacketManager(object):
         packet_identifier = 0
         remaining_length += 1
 
+        # payload
         encoded_payload = bytes(payload.encode('utf-8'))
         encoded_payload_length = len(encoded_payload)
         remaining_length += encoded_payload_length
-        # TODO: fails for big payloads and some of the fields might be calculated incorrectly
-        #  (e.g. weird behavior with unicode)
-        #  - Struct pack for 's' allows a max of 255 bytes -> split
-        return struct.pack(f'>BBH{topic_length}sB{encoded_payload_length}s', fixed_header, remaining_length,
-                           topic_length, topic_name, packet_identifier, encoded_payload)
+
+        pkg = bytearray()
+        pkg.extend(struct.pack(f'>B', fixed_header))
+        pkg.extend(pack_variable_byte_integer(remaining_length))
+
+        pkg.extend(struct.pack(f'>H{topic_length}sB', topic_length, topic_name, packet_identifier))
+        pkg.extend(encoded_payload)
+        return bytes(pkg)
 
     @staticmethod
     def parse_publish(packet, remaining_length, client_socket, client_address, client_manager):

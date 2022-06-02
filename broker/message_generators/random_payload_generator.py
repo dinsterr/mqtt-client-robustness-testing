@@ -5,8 +5,9 @@ import unicodedata
 from broker.message_generators.message_generator import MessageGenerator
 from packets.mqtt_packet_manager import MQTTPacketManager
 
-MAX_PAYLOAD_CHARS = 50
+MAX_PAYLOAD_CHARS = 1024
 
+# source: https://gist.github.com/mattcarp/3173004
 unicode_glyphs = ''.join(
     chr(char)
     for char in range(65533)
@@ -15,7 +16,6 @@ unicode_glyphs = ''.join(
 )
 
 
-# source: https://gist.github.com/mattcarp/3173004
 def random_unicode_string(lower_limit=0, upper_limit=MAX_PAYLOAD_CHARS):
     rand_length = random.randint(lower_limit, upper_limit)
     return ''.join([random.choice(unicode_glyphs)
@@ -31,5 +31,4 @@ class RandomPayloadGenerator(MessageGenerator):
     _GENERATOR_TYPE = "RANDOM"
 
     def __next__(self):
-        return MQTTPacketManager.prepare_publish(self._generator_config.topic,
-                                                 random_ascii_string(lower_limit=10, upper_limit=20))
+        return MQTTPacketManager.prepare_publish(self._generator_config.topic, random_unicode_string())
