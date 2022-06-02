@@ -107,7 +107,8 @@ class MQTTPacketManager(object):
         return struct.pack('>BBHBB', fixed_header, remaining_length, packet_identifier, property_length, payload)
 
     @staticmethod
-    def prepare_publish(topic, payload):
+    def prepare_publish(topic, payload, control_packet_type=None, dup=None, qos=None, retain=None,
+                        packet_identifier=None, payload_length=None, topic_length=None, remaining_length=None):
         """
         Prepare the PUBLISH message according to the MQTTv5.0 specification Chapter 3.3 PUBLISH – Publish message. Also
         supports MQTTv3.1.1.
@@ -115,25 +116,28 @@ class MQTTPacketManager(object):
         """
 
         # fixed header
-        control_packet_type = enums.PacketIdentifer.PUBLISH.value
-        dup = 0x0
-        qos = 0x0
-        retain = 0x0
+        control_packet_type = control_packet_type or enums.PacketIdentifer.PUBLISH.value
+        dup = dup or 0x0
+        qos = qos or 0x0
+        retain = retain or 0x0
         fixed_header = control_packet_type << 4 | ((dup & 0x1) << 3) | (qos << 1) | (retain & 0x1)
-        remaining_length = 2
 
         # variable header
         topic_name = bytes(topic.encode('utf-8'))
-        topic_length = len(topic_name)
-        remaining_length += topic_length
+        topic_length = topic_length or len(topic_name)
 
-        packet_identifier = 0
-        remaining_length += 1
+        packet_identifier = packet_identifier or 0
 
         # payload
         encoded_payload = bytes(payload.encode('utf-8'))
-        encoded_payload_length = len(encoded_payload)
-        remaining_length += encoded_payload_length
+        encoded_payload_length = payload_length or len(encoded_payload)
+
+        if not remaining_length:
+            remaining_length = 2
+            remaining_length += topic_length
+            # packet identifier
+            remaining_length += 1
+            remaining_length += encoded_payload_length
 
         pkg = bytearray()
         pkg.extend(struct.pack(f'>B', fixed_header))
