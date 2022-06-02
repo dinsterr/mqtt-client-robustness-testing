@@ -4,7 +4,6 @@ from abc import abstractmethod
 class MessageGeneratorConfig:
     def __init__(self):
         self.generator_type = None
-        # TODO: currently unused
         self.msg_topic = None
 
 

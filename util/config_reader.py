@@ -80,9 +80,9 @@ class BrokerConfigReader(object):
                 elif identifier == "AUTO_PUBLISH_INTERVAL":
                     listenerconfig._auto_publish_interval = value
                 elif identifier == "MESSAGE_GENERATOR_TYPE":
-                    listenerconfig._message_generator_config.generator_type = value
+                    listenerconfig.message_generator_config.generator_type = value
                 elif identifier == "MESSAGE_GENERATOR_TOPIC":
-                    listenerconfig._message_generator_config.topic = value
+                    listenerconfig.message_generator_config.topic = value
             except FileNotFoundError:
                 print(
                     f"An error has occurred at the value of your setting '{identifier}'. "

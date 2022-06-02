@@ -4,6 +4,19 @@ import packets.enums as enums
 import util.logger as logger
 
 
+# source: https://github.com/wialon/gmqtt/blob/afe79bfa89990c58ca0fb638e107290745d491a8/gmqtt/mqtt/utils.py#L61
+def pack_variable_byte_integer(value):
+    remaining_bytes = bytearray()
+    while True:
+        value, b = divmod(value, 128)
+        if value > 0:
+            b |= 0x80
+        remaining_bytes.extend(struct.pack('!B', b))
+        if value <= 0:
+            break
+    return remaining_bytes
+
+
 class MQTTPacketManager(object):
     @staticmethod
     def parse_packet(packet, client_socket, client_address, client_manager):
@@ -92,6 +105,75 @@ class MQTTPacketManager(object):
         payload = enums.SubackReasonCodes.GrantedQOS0.value
         remaining_length += 1
         return struct.pack('>BBHBB', fixed_header, remaining_length, packet_identifier, property_length, payload)
+
+    @staticmethod
+    def prepare_publish(topic, payload, control_packet_type=None, dup=None, qos=None, retain=None,
+                        packet_identifier=None, payload_length=None, topic_length=None, remaining_length=None):
+        """
+        Prepare the PUBLISH message according to the MQTTv5.0 specification Chapter 3.3 PUBLISH – Publish message. Also
+        supports MQTTv3.1.1.
+        We allow any payload size, even if it exceeds the MQTT specification limit.
+        """
+
+        # fixed header
+        control_packet_type = control_packet_type or enums.PacketIdentifer.PUBLISH.value
+        dup = dup or 0x0
+        qos = qos or 0x0
+        retain = retain or 0x0
+        fixed_header = control_packet_type << 4 | ((dup & 0x1) << 3) | (qos << 1) | (retain & 0x1)
+
+        # variable header
+        topic_name = bytes(topic.encode('utf-8'))
+        topic_length = topic_length or len(topic_name)
+
+        packet_identifier = packet_identifier or 0
+
+        # payload
+        encoded_payload = bytes(payload.encode('utf-8'))
+        encoded_payload_length = payload_length or len(encoded_payload)
+
+        if not remaining_length:
+            remaining_length = 2
+            remaining_length += topic_length
+            # packet identifier
+            remaining_length += 1
+            remaining_length += encoded_payload_length
+
+        pkg = bytearray()
+        pkg.extend(struct.pack(f'>B', fixed_header))
+        pkg.extend(pack_variable_byte_integer(remaining_length))
+
+        pkg.extend(struct.pack(f'>H{topic_length}sB', topic_length, topic_name, packet_identifier))
+        pkg.extend(encoded_payload)
+        return bytes(pkg)
+
+    @staticmethod
+    def parse_publish(packet, remaining_length, client_socket, client_address, client_manager):
+        """
+        Parse the PUBLISH message according to the MQTTv5.0 specification Chapter 3.3 PUBLISH – Publish message. Also
+        supports MQTTv3.1.1.
+        :param client_manager: manager of the client connections (@ClientManager)
+        :param client_socket: socket of the publishing client
+        :param client_address: address of the publishing client
+        :param packet: the raw bytes packet that was received
+        :param remaining_length: remaining length of the packet
+        :return: a dictionary containing meaningful values of the received packet
+                (identifier, topic, properties, payload)
+        """
+        parsed_msg = {'identifier': enums.PacketIdentifer.PUBLISH, 'raw_packet': packet}
+        current_pos = 2
+        current_pos, parsed_msg['topic'] = MQTTPacketManager.extract_topic(packet, current_pos)
+        parsed_msg['properties'] = {}
+
+        if client_manager.get_user_properties(client_socket, client_address)[enums.Properties.Version] \
+                == enums.Version.MQTTv5.value:
+            current_pos, properties = MQTTPacketManager.extract_properties(packet, current_pos)
+            if len(properties) != 0:
+                for user_property in properties:
+                    parsed_msg['properties'][user_property] = properties[user_property]
+
+        current_pos, parsed_msg['payload'] = MQTTPacketManager.extract_publish_payload(packet, current_pos)
+        return parsed_msg
 
     @staticmethod
     def parse_disconnect():

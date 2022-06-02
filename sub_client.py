@@ -20,6 +20,9 @@ def on_connect(client, flags, rc, properties):
     :param rc: reconnection flag
     :param properties: specified user properties
     """
+    logging.info(f"Subscribing to '{args.topic}.'")
+    client.subscribe(args.topic, qos=0, subscription_identifier=1)
+
     logging.info("[CONNECTION ESTABLISHED]")
 
 
@@ -84,9 +87,6 @@ async def main(args):
     assign_callbacks_to_client(client)
     await client.connect(host=args.host, port=args.port)
 
-    logging.info(f"Subscribing to '{args.topic}.'")
-    client.subscribe(args.topic, qos=0, subscription_identifier=1)
-
     await STOP.wait()
     try:
         await client.disconnect(session_expiry_interval=0)
@@ -120,7 +120,8 @@ if __name__ == '__main__':
                         help=f"Network port to connect to. Defaults to {PORT}.")
 
     # argument for topic
-    parser.add_argument('-t', '--topic', default=TOPIC, type=str, dest="topic", metavar="TOPIC", help="MQTT topic to subscribe to.")
+    parser.add_argument('-t', '--topic', default=TOPIC, type=str, dest="topic", metavar="TOPIC",
+                        help="MQTT topic to subscribe to.")
 
     args = parser.parse_args()
 
