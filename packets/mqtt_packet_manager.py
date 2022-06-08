@@ -82,7 +82,10 @@ class MQTTPacketManager(object):
         reason_code = enums.ConnectReasonCodes.Success.value
         remaining_length += 1
 
-        return struct.pack('BBBB', fixed_header, remaining_length, flags, reason_code)
+        property_length = 0
+        remaining_length += 1
+
+        return struct.pack('BBBBB', fixed_header, remaining_length, flags, reason_code, property_length)
 
     @staticmethod
     def prepare_suback(parsed_msg):

@@ -50,7 +50,7 @@ class Listener(object):
                 if client_socket and client_address:
                     client_thread = ClientThread(client_socket, client_address, self, self._subscription_manager,
                                                  self._client_manager, self.debug)
-                    self.open_sockets[client_address + '_LT'] = client_thread
+                    self.open_sockets[str(client_address) + '_LT'] = client_thread
                     client_thread.setDaemon(True)
                     client_thread.start()
 
@@ -59,7 +59,7 @@ class Listener(object):
                                                                 self._subscription_manager, self._client_manager,
                                                                 self._auto_publish_interval,
                                                                 self._message_generator_config, self.debug)
-                        self.open_sockets[client_address + '_APT'] = client_thread
+                        self.open_sockets[str(client_address) + '_APT'] = client_thread
                         client_thread.setDaemon(True)
                         client_thread.start()
             except ConnectionAbortedError:

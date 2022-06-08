@@ -16,6 +16,7 @@ class AutoPublishClientThread(ClientThread):
 
     def run(self):
         try:
+            time.sleep(2)
             while self._running:
                 self.publish()
                 time.sleep(self._auto_publish_interval)
