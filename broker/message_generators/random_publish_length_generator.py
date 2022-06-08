@@ -28,7 +28,10 @@ def random_ascii_string(lower_limit=0, upper_limit=MAX_PAYLOAD_CHARS):
 
 
 class RandomPayloadGenerator(MessageGenerator):
-    _GENERATOR_TYPE = "RANDOM_PAYLOAD"
+    _GENERATOR_TYPE = "RANDOM_PUBLISH_LENGTH"
 
     def __next__(self):
-        return MQTTPacketManager.prepare_publish(self._generator_config.topic, random_unicode_string())
+        payload = random_unicode_string()
+
+        return MQTTPacketManager.prepare_publish(self._generator_config.topic, payload,
+                                                 remaining_length=random.randint(0, len(payload.encode('utf-8'))))
