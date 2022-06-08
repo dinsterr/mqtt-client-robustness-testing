@@ -73,7 +73,6 @@ class BrokerConfigReader(object):
             setting = setting.strip().split()
             identifier = setting[0]
             try:
-                # TODO: find a more flexible way to define config properties
                 value = BrokerConfigReader.handle_config_value(identifier, setting[1].strip())
                 if identifier == "AUTO_PUBLISH":
                     listenerconfig._is_auto_publish = value

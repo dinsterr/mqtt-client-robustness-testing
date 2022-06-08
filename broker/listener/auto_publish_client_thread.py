@@ -30,8 +30,5 @@ class AutoPublishClientThread(ClientThread):
     def publish(self):
         topic = 'foo'
         msg = next(self._message_generator)
-        # TODO: send message to current client_socket instead of a target subscribed
-        for sub in self._subscription_manager.get_topic_subscribers(topic):
-            logger.logging.info(
-                f"Sent publish message '{msg}' in '{topic}' to Client {sub['client_id']}")
-            sub['client_socket'].send(msg)
+        logger.logging.info(f"Sent publish message '{msg}' in '{topic}' to Client {self.client_id}")
+        self.client_socket.send(msg)
