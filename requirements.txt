@@ -1,2 +1,3 @@
 uvloop~=0.16.0
 gmqtt~=0.6.11
+bitarray~=2.5.1
