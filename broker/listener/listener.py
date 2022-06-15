@@ -73,9 +73,8 @@ class Listener(object):
         if len(self.open_sockets) != 0:
             logger.logging.info("--- Closing open client connections")
             for index, client_thread in enumerate(self.open_sockets):
-                logger.logging.info(f"\t --- Connection {index + 1}/{len(self.open_sockets)} closed")
+                self.open_sockets[index].close()
             logger.logging.info("--- All open client connections were successfully closed.")
-        self.sock.close()
 
     @property
     def running(self):
