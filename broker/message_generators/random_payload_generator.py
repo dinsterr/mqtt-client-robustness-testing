@@ -1,19 +1,11 @@
 import random
 import string
-import unicodedata
 
 from broker.message_generators.message_generator import MessageGenerator
 from packets.mqtt_packet_manager import MQTTPacketManager
+from utils.generator_util import unicode_glyphs
 
 MAX_PAYLOAD_CHARS = 1024
-
-# source: https://gist.github.com/mattcarp/3173004
-unicode_glyphs = ''.join(
-    chr(char)
-    for char in range(65533)
-    # use the unicode categories that don't include control codes
-    if unicodedata.category(chr(char))[0] in 'LMNPSZ'
-)
 
 
 def random_unicode_string(lower_limit=0, upper_limit=MAX_PAYLOAD_CHARS):

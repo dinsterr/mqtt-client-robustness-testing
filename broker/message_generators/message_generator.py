@@ -12,7 +12,7 @@ class MessageGenerator(object):
 
     def __new__(cls, generator_config):
         # Uses a factory pattern to create a MessageGenerator of type 'generator_type'
-        # Available classes are dynamically pulled from the 'broker.message_generators'
+        # Available classes are dynamically pulled from the 'broker.message_generators' package
         for subclass in MessageGenerator.__subclasses__():
             if generator_config.generator_type and generator_config.generator_type == subclass._GENERATOR_TYPE:
                 self = object.__new__(subclass)
