@@ -10,16 +10,16 @@ terminate_all = False
 
 
 class ClientSocketThread(threading.Thread):
-	def __init__(self, clientSocket, targetHost, targetPort):
+	def __init__(self, client_socket: socket.socket, target_host: str, target_port: int):
 		threading.Thread.__init__(self)
-		self.__clientSocket = clientSocket
-		self.__targetHost = targetHost
-		self.__targetPort = targetPort
+		self.__clientSocket = client_socket
+		self.__targetHost = target_host
+		self.__targetPort = target_port
 		
 	def run(self):
 		print("Client Thread started")
 		
-		self.__clientSocket.setblocking(0)
+		self.__clientSocket.setblocking(False)
 		
 		target_host_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		target_host_socket.connect((self.__targetHost, self.__targetPort))
@@ -81,24 +81,26 @@ class ClientSocketThread(threading.Thread):
 		
 		self.__clientSocket.close()
 		target_host_socket.close()
-		print("ClienThread terminating")
+		print("Client Thread terminated")
 
 
-def proxy_socket(local_host, local_port, target_host, target_port):
+def proxy_socket(local_host: str, local_port: int, target_host: str, target_port: int):
 	global terminate_all
 
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	server_socket.bind((local_host, local_port))
 	server_socket.listen(5)
 
-	print("Waiting for client...")
 	while True:
 		try:
+			print("\nWaiting for client...")
 			client_socket, address = server_socket.accept()
 		except KeyboardInterrupt:
 			terminate_all = True
 			print("\nTerminating...")
 			break
+		print("Client Thread starting...")
 		ClientSocketThread(client_socket, target_host, target_port).start()
 
 	server_socket.close()
+	print("Proxy Sockets closed")
