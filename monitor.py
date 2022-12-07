@@ -2,9 +2,9 @@ import shlex
 import subprocess
 import threading
 from time import sleep
-import logging
 
 from monitor import tcp_proxy
+import logger_factory
 
 # TODO: better logging. separation into debug and warn
 # TODO: correctly terminate all threads
@@ -16,20 +16,8 @@ local_port = 8088
 target_address = "localhost"
 target_port = 12345
 
-formatter = logging.Formatter(fmt='%(asctime)-16s | %(name)-14s | %(levelname)-6s | %(message)s', datefmt='%d-%m-%Y %H:%M:%S')
-
-logger = logging.getLogger('Monitor')
-logger.setLevel(logging.DEBUG)
-# create file handler which logs even debug messages
-fh = logging.FileHandler('main.log')
-fh.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-logger.addHandler(fh)
-logger.addHandler(ch)
+main_logger = logger_factory.construct_logger("monitor")
+subprocess_logger = logger_factory.construct_logger("subprocess")
 
 if __name__ == "__main__":
     # Spawn the proxy socket
@@ -40,7 +28,7 @@ if __name__ == "__main__":
 
     sleep(1)
     command_line = f"bash ./send.sh {target_address} {target_port}"
-    logger.debug("Starting subprocess: " + command_line)
+    main_logger.debug("Starting subprocess: " + command_line)
     # According to the subprocess documentation:
     # It may not be obvious how to break a shell command into a sequence of arguments, especially in complex cases.
     split_command_line = shlex.split(command_line)
@@ -48,10 +36,10 @@ if __name__ == "__main__":
     stdout_data, stderr_data = process.communicate(timeout=15)
     return_code = process.returncode
 
-    logger.debug(f"Subprocess std output: {stdout_data}")
-    logger.debug(f"Subprocess error output: {stderr_data}")
-    logger.debug(f"Subprocess return code: {return_code}")
+    subprocess_logger.debug(f"STDOUT: {stdout_data}")
+    subprocess_logger.debug(f"STDERR: {stderr_data}")
+    subprocess_logger.debug(f"RETURN: {return_code}")
 
-    logger.debug("Subprocess finished")
-    logger.debug("Stopped monitor")
+    main_logger.debug("Subprocess finished")
+    main_logger.debug("Stopped monitor")
     exit()

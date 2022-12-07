@@ -1,8 +1,10 @@
 import socket
 import sys
-import logging
+import threading
 
-logger = logging.getLogger("Monitor.Proxy")
+import logger_factory
+
+logger = logger_factory.construct_logger("proxy")
 stop = False
 
 
@@ -21,21 +23,19 @@ def _server_loop(local_host, local_port, remote_host, remote_port, receive_first
 
     logger.debug(f"Listening on {local_host}:{local_port}")
 
-    # Process a maximum of 5 new connections
     # TODO: possibility to stop processing
     # TODO: auto close sockets after a while
-    server_socket.listen(1)
-    #global stop
-    #while not stop:
-    client_socket, addr = server_socket.accept()
+    server_socket.listen(5)
+    global stop
+    while not stop:
+        client_socket, addr = server_socket.accept()
 
-    logger.debug(f"Receiving connection from {addr[0]}:{addr[1]}")
+        logger.debug(f"Receiving connection from {addr[0]}:{addr[1]}")
 
-    # Start a new thread for any incoming connections
-    #proxy_thread = threading.Thread(target=proxy_handler,
-    #                                args=(client_socket, remote_host, remote_port, receive_first))
-    #proxy_thread.start()
-    _proxy_handler(client_socket, remote_host, remote_port, receive_first)
+        # Start a new thread for any incoming connections
+        proxy_thread = threading.Thread(target=_proxy_handler,
+                                        args=(client_socket, remote_host, remote_port, receive_first))
+        proxy_thread.start()
 
 
 def _proxy_handler(client_socket, remote_host, remote_port, receive_first):
