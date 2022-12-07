@@ -3,7 +3,7 @@ import string
 
 from broker.message_generators.message_generator import MessageGenerator
 from packets.mqtt_packet_manager import MQTTPacketManager
-from utils.generator_util import unicode_glyphs
+from .utils.generator_util import unicode_glyphs
 
 MAX_PAYLOAD_CHARS = 1024
 
