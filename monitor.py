@@ -1,6 +1,5 @@
 import shlex
 import subprocess
-import sys
 import threading
 from time import sleep
 import logging
@@ -14,30 +13,45 @@ from monitor import tcp_proxy
 
 local_address = "localhost"
 local_port = 8088
-target_port = 8081
+target_address = "localhost"
+target_port = 12345
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-4s (%(levelname)-4s) %(message)s',
-                    datefmt='%d-%m-%Y %H:%M:%S')
-logging.getLogger("main")
+formatter = logging.Formatter(fmt='%(asctime)-16s | %(name)-14s | %(levelname)-6s | %(message)s', datefmt='%d-%m-%Y %H:%M:%S')
+
+logger = logging.getLogger('Monitor')
+logger.setLevel(logging.DEBUG)
+# create file handler which logs even debug messages
+fh = logging.FileHandler('main.log')
+fh.setLevel(logging.DEBUG)
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+logger.addHandler(fh)
+logger.addHandler(ch)
 
 if __name__ == "__main__":
-
     # Spawn the proxy socket
     function = tcp_proxy.start_listening
-    args = (local_address, local_port, local_address, target_port, False)
+    args = (local_address, local_port, local_address, target_port, True)
     socket_thread = threading.Thread(target=function, args=args)
     socket_thread.start()
 
-    command_line = f"bash ./send.sh"
-    logging.debug("Starting subprocess: " + command_line)
+    sleep(1)
+    command_line = f"bash ./send.sh {target_address} {target_port}"
+    logger.debug("Starting subprocess: " + command_line)
     # According to the subprocess documentation:
     # It may not be obvious how to break a shell command into a sequence of arguments, especially in complex cases.
     split_command_line = shlex.split(command_line)
     process = subprocess.Popen(split_command_line, shell=False, stdout=subprocess.PIPE)
-    for c in iter(lambda: process.stdout.read(1), b""):
-        sys.stdout.buffer.write(c)
+    stdout_data, stderr_data = process.communicate(timeout=15)
+    return_code = process.returncode
 
-    logging.debug("Subprocess finished")
-    logging.debug("Stopped monitor")
-    socket_thread.join(2)
+    logger.debug(f"Subprocess std output: {stdout_data}")
+    logger.debug(f"Subprocess error output: {stderr_data}")
+    logger.debug(f"Subprocess return code: {return_code}")
+
+    logger.debug("Subprocess finished")
+    logger.debug("Stopped monitor")
+    exit()
