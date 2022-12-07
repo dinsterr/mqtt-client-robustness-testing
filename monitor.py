@@ -16,15 +16,21 @@ local_address = "localhost"
 local_port = 8088
 target_port = 8081
 
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(name)-4s (%(levelname)-4s) %(message)s',
+                    datefmt='%d-%m-%Y %H:%M:%S')
+logging.getLogger("main")
+
 if __name__ == "__main__":
+
     # Spawn the proxy socket
     function = tcp_proxy.start_listening
     args = (local_address, local_port, local_address, target_port, False)
     socket_thread = threading.Thread(target=function, args=args)
     socket_thread.start()
 
-    logging.warning("Starting subprocess")
-    command_line = f"bash ./test.sh"
+    command_line = f"bash ./send.sh"
+    logging.debug("Starting subprocess: " + command_line)
     # According to the subprocess documentation:
     # It may not be obvious how to break a shell command into a sequence of arguments, especially in complex cases.
     split_command_line = shlex.split(command_line)
@@ -32,6 +38,6 @@ if __name__ == "__main__":
     for c in iter(lambda: process.stdout.read(1), b""):
         sys.stdout.buffer.write(c)
 
-    logging.warning("Subprocess finished")
-    logging.warning("Stopped monitor")
+    logging.debug("Subprocess finished")
+    logging.debug("Stopped monitor")
     socket_thread.join(2)

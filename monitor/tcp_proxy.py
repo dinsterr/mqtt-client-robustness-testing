@@ -3,32 +3,30 @@ import sys
 import threading
 import logging
 
+logging.getLogger("tcp_proxy")
 stop = False
 
 
 def server_loop(local_host, local_port, remote_host, remote_port, receive_first):
-    # Define a server socket to listen on
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     try:
-        # Bind the socket to the defined local address and port
         server_socket.bind((local_host, local_port))
-    except:
-        logging.warning("[!!] Failed to connect to {0}:{1}".format(local_host, local_port))
-        logging.warning("[!!] Check for other listening sockets or correct")
+    except OSError:
+        logging.warning(f"Failed to create listening socket on {local_host}:{local_port}.")
         sys.exit(0)
 
-    logging.warning("Successfully listening on {0}:{1}".format(local_host, local_port))
+    logging.debug(f"Listening on {local_host}:{local_port}")
 
-    # Listen for a maximum of 5 connections
+    # Process a maximum of 5 new connections
+    # TODO: possibility to stop processing
+    # TODO: auto close sockets after a while
     server_socket.listen(5)
-
-    # Loop for incoming connections
     #global stop
     #while not stop:
     client_socket, addr = server_socket.accept()
 
-    logging.warning("[==>] Received incoming connection from {0}:{1}".format(addr[0], addr[1]))
+    logging.debug(f"Receiving connection from {addr[0]}:{addr[1]}")
 
     # Start a new thread for any incoming connections
     proxy_thread = threading.Thread(target=proxy_handler,
@@ -61,7 +59,7 @@ def proxy_handler(client_socket, remote_host, remote_port, receive_first):
 
         # If data exists send the response to the local client
         if len(remote_buffer):
-            logging.warning("[<==] Sending {0} bytes from localhost".format(len(remote_buffer)))
+            logging.debug(f"Forwarding {len(remote_buffer)} bytes from remote.")
             client_socket.send(remote_buffer)
 
             # Continually read from local, print the output and forward to the remotehost
@@ -78,14 +76,14 @@ def proxy_handler(client_socket, remote_host, remote_port, receive_first):
         if not len(local_buffer):
             client_socket.close()
             remote_socket.close()
-            logging.warning("[*] No more data. Connections closed")
+            logging.debug("Connections closed.")
 
             break
 
 
 def send_data(buffer, type, socket):
     if len(buffer):
-        logging.warning("[<==] Received {0} bytes from {1}.".format(len(buffer), type))
+        logging.debug(f"Received {len(buffer)} bytes from {type}.")
         #hexdump(buffer)
 
         if "localhost" in type:
@@ -95,7 +93,7 @@ def send_data(buffer, type, socket):
 
         socket.send(mod_buffer)
 
-        logging.warning("[<==>] Sent to {0}".format(type))
+        logging.debug(f"Sent buffer to {type}")
 
 
 def receive_from(connection):
@@ -119,12 +117,12 @@ def receive_from(connection):
 
 
 def response_handler(buffer):
-    logging.warning("response_handler: {0}".format(buffer))
+    logging.debug("response_handler: {0}".format(buffer))
     return buffer
 
 
 def request_handler(buffer):
-    logging.warning("request handler: {0}".format(buffer))
+    logging.debug("request handler: {0}".format(buffer))
     return buffer
 
 
