@@ -1,7 +1,9 @@
 import shlex
 import subprocess
 import sys
-from threading import Thread
+import threading
+from time import sleep
+import logging
 
 from monitor import tcp_proxy
 
@@ -15,14 +17,14 @@ local_port = 8088
 target_port = 8081
 
 if __name__ == "__main__":
-    function = tcp_proxy.proxy_socket
-    args = (local_address, local_port, local_address, target_port)
+    # Spawn the proxy socket
+    function = tcp_proxy.start_listening
+    args = (local_address, local_port, local_address, target_port, False)
+    socket_thread = threading.Thread(target=function, args=args)
+    socket_thread.start()
 
-    # Spawn the proxy socket and wait for a connection from the client before connecting to the server
-    thread = Thread(target=function, args=args)
-    thread.start()
-
-    command_line = f"nc {local_address} {local_port}"
+    logging.warning("Starting subprocess")
+    command_line = f"bash ./test.sh"
     # According to the subprocess documentation:
     # It may not be obvious how to break a shell command into a sequence of arguments, especially in complex cases.
     split_command_line = shlex.split(command_line)
@@ -30,6 +32,6 @@ if __name__ == "__main__":
     for c in iter(lambda: process.stdout.read(1), b""):
         sys.stdout.buffer.write(c)
 
-    print("Subprocess finished")
-    print("Stopped monitor")
-
+    logging.warning("Subprocess finished")
+    logging.warning("Stopped monitor")
+    socket_thread.join(2)

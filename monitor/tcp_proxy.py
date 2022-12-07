@@ -1,106 +1,141 @@
-#!/usr/bin/env python
-
-# Adapted from https://gist.github.com/sivachandran/1969859
-
 import socket
+import sys
 import threading
-import select
+import logging
 
-terminate_all = False
-
-
-class ClientSocketThread(threading.Thread):
-	def __init__(self, client_socket: socket.socket, target_host: str, target_port: int):
-		threading.Thread.__init__(self)
-		self.__clientSocket = client_socket
-		self.__targetHost = target_host
-		self.__targetPort = target_port
-		
-	def run(self):
-		print("Client Thread started")
-		
-		self.__clientSocket.setblocking(False)
-		
-		target_host_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		target_host_socket.connect((self.__targetHost, self.__targetPort))
-		target_host_socket.setblocking(False)
-		
-		client_data = bytes()
-		target_host_data = bytes()
-		terminate = False
-		while not terminate and not terminate_all:
-			inputs = [self.__clientSocket, target_host_socket]
-			outputs = []
-			
-			if len(client_data) > 0:
-				outputs.append(self.__clientSocket)
-				
-			if len(target_host_data) > 0:
-				outputs.append(target_host_socket)
-			
-			try:
-				inputs_ready, outputs_ready, errors_ready = select.select(inputs, outputs, [], 1.0)
-			except Exception as e:
-				print(e)
-				break
-
-			data = None
-			for inp in inputs_ready:
-				if inp == self.__clientSocket:
-					try:
-						data = self.__clientSocket.recv(4096)
-					except Exception as e:
-						print(e)
-					
-					if data is not None:
-						if len(data) > 0:
-							target_host_data += data
-						else:
-							terminate = True
-				elif inp == target_host_socket:
-					try:
-						data = target_host_socket.recv(4096)
-					except Exception as e:
-						print(e)
-						
-					if data is not None:
-						if len(data) > 0:
-							client_data += data
-						else:
-							terminate = True
-						
-			for out in outputs_ready:
-				if out == self.__clientSocket and len(client_data) > 0:
-					bytes_written = self.__clientSocket.send(client_data)
-					if bytes_written > 0:
-						client_data = client_data[bytes_written:]
-				elif out == target_host_socket and len(target_host_data) > 0:
-					bytes_written = target_host_socket.send(target_host_data)
-					if bytes_written > 0:
-						target_host_data = target_host_data[bytes_written:]
-		
-		self.__clientSocket.close()
-		target_host_socket.close()
-		print("Client Thread terminated")
+stop = False
 
 
-def proxy_socket(local_host: str, local_port: int, target_host: str, target_port: int):
-	global terminate_all
+def server_loop(local_host, local_port, remote_host, remote_port, receive_first):
+    # Define a server socket to listen on
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	server_socket.bind((local_host, local_port))
-	server_socket.listen(5)
+    try:
+        # Bind the socket to the defined local address and port
+        server_socket.bind((local_host, local_port))
+    except:
+        logging.warning("[!!] Failed to connect to {0}:{1}".format(local_host, local_port))
+        logging.warning("[!!] Check for other listening sockets or correct")
+        sys.exit(0)
 
-	while True:
-		try:
-			print("\nWaiting for client...")
-			client_socket, address = server_socket.accept()
-		except KeyboardInterrupt:
-			terminate_all = True
-			print("\nTerminating...")
-			break
-		print("Client Thread starting...")
-		ClientSocketThread(client_socket, target_host, target_port).start()
+    logging.warning("Successfully listening on {0}:{1}".format(local_host, local_port))
 
-	server_socket.close()
-	print("Proxy Sockets closed")
+    # Listen for a maximum of 5 connections
+    server_socket.listen(5)
+
+    # Loop for incoming connections
+    #global stop
+    #while not stop:
+    client_socket, addr = server_socket.accept()
+
+    logging.warning("[==>] Received incoming connection from {0}:{1}".format(addr[0], addr[1]))
+
+    # Start a new thread for any incoming connections
+    proxy_thread = threading.Thread(target=proxy_handler,
+                                    args=(client_socket, remote_host, remote_port, receive_first))
+    proxy_thread.start()
+
+
+def start_listening(local_host: str, local_port: int, remote_host: str, remote_port: int, receive_first: bool):
+    # Start looping and listening for incoming requests (see implementation below)
+    server_loop(local_host, local_port, remote_host, remote_port, receive_first)
+
+
+def proxy_handler(client_socket, remote_host, remote_port, receive_first):
+    # Define the remote socket used for forwarding requests
+    remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # Establish a connection to the remote host
+    remote_socket.connect((remote_host, remote_port))
+
+    # intercept the response before it's received
+    if receive_first:
+        # receive data from the connection and return a buffer
+        remote_buffer = receive_from(remote_socket)
+
+        # Convert the buffer from hex to human readable output
+        #hexdump(remote_buffer)
+
+        # Handle the response (an opportunity for read/write of the response data)
+        remote_buffer = response_handler(remote_buffer)
+
+        # If data exists send the response to the local client
+        if len(remote_buffer):
+            logging.warning("[<==] Sending {0} bytes from localhost".format(len(remote_buffer)))
+            client_socket.send(remote_buffer)
+
+            # Continually read from local, print the output and forward to the remotehost
+    while True:
+        # Receive data from the client and send it to the remote
+        local_buffer = receive_from(client_socket)
+        send_data(local_buffer, "localhost", remote_socket)
+
+        # Receive the response and sent it to the client
+        remote_buffer = receive_from(remote_socket)
+        send_data(remote_buffer, "remotehost", client_socket)
+
+        # Close connections, print and break out when no more data is available
+        if not len(local_buffer):
+            client_socket.close()
+            remote_socket.close()
+            logging.warning("[*] No more data. Connections closed")
+
+            break
+
+
+def send_data(buffer, type, socket):
+    if len(buffer):
+        logging.warning("[<==] Received {0} bytes from {1}.".format(len(buffer), type))
+        #hexdump(buffer)
+
+        if "localhost" in type:
+            mod_buffer = request_handler(buffer)
+        else:
+            mod_buffer = response_handler(buffer)
+
+        socket.send(mod_buffer)
+
+        logging.warning("[<==>] Sent to {0}".format(type))
+
+
+def receive_from(connection):
+    buffer = b""
+
+    # use a 2 second timeout
+    connection.settimeout(2)
+
+    try:
+        while True:
+            data = connection.recv(4096)
+
+            if not data:
+                break
+
+            buffer += data
+    except socket.timeout:
+        pass
+
+    return buffer
+
+
+def response_handler(buffer):
+    logging.warning("response_handler: {0}".format(buffer))
+    return buffer
+
+
+def request_handler(buffer):
+    logging.warning("request handler: {0}".format(buffer))
+    return buffer
+
+
+def hexdump(src, length=16):
+    result = []
+    #digits = 4 if isinstance(src, unicode) else 2
+    digits = 2
+
+    for i in range(0, len(src), length):
+        s = src[i:i + length]
+        hexa = b' '.join(["%0*X" % (digits, ord(str(x))) for x in s])
+        text = b''.join([x if 0x20 <= ord(x) < 0x7F else b'.' for x in s])
+        result.append(b"%04X   %-*s   %s" % (i, length * (digits + 1), hexa, text))
+    logging.warning(b'\n'.join(result))
