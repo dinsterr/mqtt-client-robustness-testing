@@ -1,5 +1,4 @@
 import socket
-import sys
 import threading
 
 import logger_factory
@@ -13,19 +12,11 @@ def start_listening(local_host: str, local_port: int, remote_host: str, remote_p
 
 
 def _server_loop(local_host, local_port, remote_host, remote_port, receive_first):
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    try:
-        server_socket.bind((local_host, local_port))
-    except OSError:
-        logger.exception(f"Failed to create listening socket on {local_host}:{local_port}.")
-        sys.exit(0)
-
+    server_socket = socket.create_server((local_host, local_port))
     logger.debug(f"Listening on {local_host}:{local_port}")
 
     # TODO: possibility to stop processing
     # TODO: auto close sockets after a while
-    server_socket.listen(5)
     global stop
     while not stop:
         client_socket, addr = server_socket.accept()
