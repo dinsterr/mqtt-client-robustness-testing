@@ -7,6 +7,7 @@ from typing import Callable
 
 from monitor import tcp_proxy
 import logger_factory
+from monitor.tcp_proxy import TcpProxy
 
 # TODO: correctly terminate all threads
 # TODO: how to deal with stdin. subprocess communicate?
@@ -74,11 +75,10 @@ def _monitor_process_output(process_handle: subprocess.Popen,
 
 
 if __name__ == "__main__":
-    # Spawn the proxy socket
-    function = tcp_proxy.start_listening
-    args = (local_address, local_port, local_address, target_port)
-    socket_thread = threading.Thread(target=function, args=args)
-    socket_thread.start()
+    # Spawn the proxy
+    proxy = TcpProxy(local_address, local_port, local_address, target_port)
+    thread = threading.Thread(target=proxy.run, daemon=True)
+    thread.run()
 
     # Run the subprocess which should be monitored
     command_line = f"bash ./send.sh {target_address} {target_port}"
@@ -92,6 +92,5 @@ if __name__ == "__main__":
     subprocess_logger.debug(f"RETURN: {returncode}")
 
     main_logger.debug("Subprocess finished")
-    socket_thread.join(timeout=1)
     main_logger.debug("Stopped monitor")
     exit()

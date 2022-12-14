@@ -4,110 +4,112 @@ import threading
 import logger_factory
 
 logger = logger_factory.construct_logger("proxy")
-stop = False
 
 
-def start_listening(local_host: str, local_port: int, remote_host: str, remote_port: int):
-    _server_loop(local_host, local_port, remote_host, remote_port)
+class TcpProxy:
+    _local_host: str
+    _local_port: int
+    _remote_host: str
+    _remote_port: int
 
+    _stop = False
+    _thread = None
 
-def _server_loop(local_host, local_port, remote_host, remote_port):
-    server_socket = socket.create_server((local_host, local_port))
-    logger.debug(f"Listening on {local_host}:{local_port}")
+    def __init__(self, local_host: str,
+                 local_port: int,
+                 remote_host: str,
+                 remote_port: int):
+        self._local_host = local_host
+        self._local_port = local_port
+        self._remote_host = remote_host
+        self._remote_port = remote_port
 
-    client_socket, addr = server_socket.accept()
-    logger.debug(f"Receiving connection from {addr[0]}:{addr[1]}")
+    def run(self):
+        self._server_loop(self._local_host, self._local_port, self._remote_host, self._remote_port)
 
-    # Start a new thread for any incoming connections
-    proxy_thread = threading.Thread(target=_proxy_handler,
-                                    args=(client_socket, remote_host, remote_port))
-    proxy_thread.start()
+    def _server_loop(self, local_host, local_port, remote_host, remote_port):
+        server_socket = socket.create_server((local_host, local_port))
+        logger.debug(f"Listening on {local_host}:{local_port}")
 
+        client_socket, addr = server_socket.accept()
+        logger.debug(f"Receiving connection from {addr[0]}:{addr[1]}")
 
-def _proxy_handler(client_socket, remote_host, remote_port, receive_first):
-    # Define the remote socket used for forwarding requests
-    remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Start a new thread for any incoming connections
+        proxy_thread = threading.Thread(target=self._proxy_handler,
+                                        args=(client_socket, remote_host, remote_port), daemon=True)
+        proxy_thread.start()
 
-    # Establish a connection to the remote host
-    try:
-        remote_socket.connect((remote_host, remote_port))
-    except OSError:
-        logger.exception(f"Could not create connection to remote at {remote_host}:{remote_port}.")
-        exit()
+    def _proxy_handler(self, client_socket, remote_host, remote_port):
+        # Define the remote socket used for forwarding requests
+        remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    logger.debug(f"Established connection to remote at {remote_host}:{remote_port}.")
+        # Establish a connection to the remote host
+        try:
+            remote_socket.connect((remote_host, remote_port))
+        except OSError:
+            logger.exception(f"Could not create connection to remote at {remote_host}:{remote_port}.")
+            exit()
 
-    # Continually read from local, print the output and forward to the remotehost
-    while True:
-        # Receive data from the client and send it to the remote
-        local_buffer = _receive_from(client_socket)
-        _send_data(local_buffer, "localhost", remote_socket)
+        logger.debug(f"Established connection to remote at {remote_host}:{remote_port}.")
 
-        # Receive the response and sent it to the client
-        remote_buffer = _receive_from(remote_socket)
-        _send_data(remote_buffer, "remotehost", client_socket)
-
-        # Close connections, print and break out when no more data is available
-        if not len(local_buffer):
-            client_socket.close()
-            remote_socket.close()
-            logger.debug("Connections closed.")
-
-            break
-
-
-def _send_data(buffer, type, socket):
-    if len(buffer):
-        logger.debug(f"Received {len(buffer)} bytes from {type}.")
-
-        if "localhost" in type:
-            mod_buffer = _request_handler(buffer)
-        else:
-            mod_buffer = _response_handler(buffer)
-
-        socket.send(mod_buffer)
-
-        logger.debug(f"Sent buffer to {type}")
-
-
-def _receive_from(connection):
-    buffer = b""
-
-    # use a 2 second timeout
-    connection.settimeout(2)
-
-    try:
+        # Continually read from local, print the output and forward to the remotehost
         while True:
-            data = connection.recv(4096)
+            # Receive data from the client and send it to the remote
+            local_buffer = TcpProxy._receive_from_socket(client_socket)
+            TcpProxy._send_data(local_buffer, "localhost", remote_socket)
 
-            if not data:
+            # Receive the response and send it to the client
+            remote_buffer = TcpProxy._receive_from_socket(remote_socket)
+            TcpProxy._send_data(remote_buffer, "remotehost", client_socket)
+
+            # Close connections, print and break out when no more data is available
+            if not len(local_buffer):
+                client_socket.close()
+                remote_socket.close()
+                logger.debug("Connections closed.")
+
                 break
 
-            buffer += data
-    except socket.timeout:
-        pass
+    @classmethod
+    def _send_data(cls, buffer, type, socket):
+        if len(buffer):
+            cls._logger.debug(f"Received {len(buffer)} bytes from {type}.")
 
-    return buffer
+            if "localhost" in type:
+                mod_buffer = TcpProxy.default_request_handler(buffer)
+            else:
+                mod_buffer = TcpProxy.default_response_handler(buffer)
 
+            socket.send(mod_buffer)
 
-def _response_handler(buffer):
-    logger.debug("response_handler: {0}".format(buffer))
-    return buffer
+            cls._logger.debug(f"Sent buffer to {type}")
 
+    @classmethod
+    def _receive_from_socket(cls, connection):
+        buffer = b""
 
-def _request_handler(buffer):
-    logger.debug("request handler: {0}".format(buffer))
-    return buffer
+        # use a two second timeout
+        connection.settimeout(2)
 
+        try:
+            while True:
+                data = connection.recv(4096)
 
-def hexdump(src, length=16):
-    result = []
-    #digits = 4 if isinstance(src, unicode) else 2
-    digits = 2
+                if not data:
+                    break
 
-    for i in range(0, len(src), length):
-        s = src[i:i + length]
-        hexa = b' '.join(["%0*X" % (digits, ord(str(x))) for x in s])
-        text = b''.join([x if 0x20 <= ord(x) < 0x7F else b'.' for x in s])
-        result.append(b"%04X   %-*s   %s" % (i, length * (digits + 1), hexa, text))
-    logger.warning(b'\n'.join(result))
+                buffer += data
+        except socket.timeout:
+            pass
+
+        return buffer
+
+    @classmethod
+    def default_response_handler(cls, buffer):
+        cls._logger.debug("response_handler: {0}".format(buffer))
+        return buffer
+
+    @classmethod
+    def default_request_handler(cls, buffer):
+        cls._logger.debug("request handler: {0}".format(buffer))
+        return buffer
