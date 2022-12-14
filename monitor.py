@@ -26,7 +26,7 @@ def _monitor_process_output(process_handle: subprocess.Popen,
                             stderr_handler: Callable[[bytes], bytes] = None,
                             monitor_frequency_secs: float = 0.1,
                             monitor_timeout_secs: float = 5,
-                            max_timeout_until_io_is_ready_secs: float = 10) -> tuple[bytes, bytes]:
+                            max_timeout_until_io_is_ready_secs: float = 10) -> tuple[bytes, bytes, int]:
     stdout_buffer = b""
     stderr_buffer = b""
 
@@ -69,13 +69,14 @@ def _monitor_process_output(process_handle: subprocess.Popen,
 
             sleep(monitor_frequency_secs)
 
-    return stdout_buffer, stderr_buffer
+    process_handle.poll()
+    return stdout_buffer, stderr_buffer, process_handle.returncode
 
 
 if __name__ == "__main__":
     # Spawn the proxy socket
     function = tcp_proxy.start_listening
-    args = (local_address, local_port, local_address, target_port, True)
+    args = (local_address, local_port, local_address, target_port)
     socket_thread = threading.Thread(target=function, args=args)
     socket_thread.start()
 
@@ -84,12 +85,13 @@ if __name__ == "__main__":
     main_logger.debug("Starting subprocess: " + command_line)
 
     process = subprocess.Popen(shlex.split(command_line), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout_buffer, stderr_buffer = _monitor_process_output(process, None, None)
+    stdout_buffer, stderr_buffer, returncode = _monitor_process_output(process, None, None)
 
     subprocess_logger.debug(f"STDOUT: {stdout_buffer}")
     subprocess_logger.debug(f"STDERR: {stderr_buffer}")
-    subprocess_logger.debug(f"RETURN: {process.returncode}")
+    subprocess_logger.debug(f"RETURN: {returncode}")
 
     main_logger.debug("Subprocess finished")
+    socket_thread.join(timeout=1)
     main_logger.debug("Stopped monitor")
     exit()

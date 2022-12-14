@@ -7,26 +7,21 @@ logger = logger_factory.construct_logger("proxy")
 stop = False
 
 
-def start_listening(local_host: str, local_port: int, remote_host: str, remote_port: int, receive_first: bool):
-    _server_loop(local_host, local_port, remote_host, remote_port, receive_first)
+def start_listening(local_host: str, local_port: int, remote_host: str, remote_port: int):
+    _server_loop(local_host, local_port, remote_host, remote_port)
 
 
-def _server_loop(local_host, local_port, remote_host, remote_port, receive_first):
+def _server_loop(local_host, local_port, remote_host, remote_port):
     server_socket = socket.create_server((local_host, local_port))
     logger.debug(f"Listening on {local_host}:{local_port}")
 
-    # TODO: possibility to stop processing
-    # TODO: auto close sockets after a while
-    global stop
-    while not stop:
-        client_socket, addr = server_socket.accept()
+    client_socket, addr = server_socket.accept()
+    logger.debug(f"Receiving connection from {addr[0]}:{addr[1]}")
 
-        logger.debug(f"Receiving connection from {addr[0]}:{addr[1]}")
-
-        # Start a new thread for any incoming connections
-        proxy_thread = threading.Thread(target=_proxy_handler,
-                                        args=(client_socket, remote_host, remote_port, receive_first))
-        proxy_thread.start()
+    # Start a new thread for any incoming connections
+    proxy_thread = threading.Thread(target=_proxy_handler,
+                                    args=(client_socket, remote_host, remote_port))
+    proxy_thread.start()
 
 
 def _proxy_handler(client_socket, remote_host, remote_port, receive_first):
@@ -42,20 +37,7 @@ def _proxy_handler(client_socket, remote_host, remote_port, receive_first):
 
     logger.debug(f"Established connection to remote at {remote_host}:{remote_port}.")
 
-    # intercept the response before it's received
-    if receive_first:
-        # receive data from the connection and return a buffer
-        remote_buffer = _receive_from(remote_socket)
-
-        # Handle the response (an opportunity for read/write of the response data)
-        remote_buffer = _response_handler(remote_buffer)
-
-        # If data exists send the response to the local client
-        if len(remote_buffer):
-            logger.debug(f"Receiving {len(remote_buffer)} bytes from remote.")
-            client_socket.send(remote_buffer)
-
-            # Continually read from local, print the output and forward to the remotehost
+    # Continually read from local, print the output and forward to the remotehost
     while True:
         # Receive data from the client and send it to the remote
         local_buffer = _receive_from(client_socket)
