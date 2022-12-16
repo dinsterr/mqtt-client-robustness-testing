@@ -1,5 +1,9 @@
+# Adapted from:
+# J. Seitz and T. Arnold,
+# “Chapter 2. The Network: Basics,” in Black Hat Python: Python programming for hackers and Pentesters,
+# San Francisco: No Starch Press, 2021.
+
 import socket
-import threading
 
 import logger_factory
 
@@ -12,9 +16,6 @@ class TcpProxy:
     _remote_host: str
     _remote_port: int
 
-    _stop = False
-    _thread = None
-
     def __init__(self, local_host: str,
                  local_port: int,
                  remote_host: str,
@@ -23,21 +24,20 @@ class TcpProxy:
         self._local_port = local_port
         self._remote_host = remote_host
         self._remote_port = remote_port
+        self.run()
 
     def run(self):
         self._server_loop(self._local_host, self._local_port, self._remote_host, self._remote_port)
 
     def _server_loop(self, local_host, local_port, remote_host, remote_port):
         server_socket = socket.create_server((local_host, local_port))
-        logger.debug(f"Listening on {local_host}:{local_port}")
 
-        client_socket, addr = server_socket.accept()
-        logger.debug(f"Receiving connection from {addr[0]}:{addr[1]}")
+        while True:
+            logger.debug(f"Waiting for connection on {local_host}:{local_port}")
+            client_socket, addr = server_socket.accept()
+            logger.debug(f"Receiving connection from {addr[0]}:{addr[1]}")
 
-        # Start a new thread for any incoming connections
-        proxy_thread = threading.Thread(target=self._proxy_handler,
-                                        args=(client_socket, remote_host, remote_port), daemon=True)
-        proxy_thread.start()
+            self._proxy_handler(client_socket, remote_host, remote_port)
 
     def _proxy_handler(self, client_socket, remote_host, remote_port):
         # Define the remote socket used for forwarding requests
@@ -73,7 +73,7 @@ class TcpProxy:
     @classmethod
     def _send_data(cls, buffer, type, socket):
         if len(buffer):
-            cls._logger.debug(f"Received {len(buffer)} bytes from {type}.")
+            logger.debug(f"Received {len(buffer)} bytes from {type}.")
 
             if "localhost" in type:
                 mod_buffer = TcpProxy.default_request_handler(buffer)
@@ -82,7 +82,7 @@ class TcpProxy:
 
             socket.send(mod_buffer)
 
-            cls._logger.debug(f"Sent buffer to {type}")
+            logger.debug(f"Sent buffer to {type}")
 
     @classmethod
     def _receive_from_socket(cls, connection):
@@ -106,10 +106,10 @@ class TcpProxy:
 
     @classmethod
     def default_response_handler(cls, buffer):
-        cls._logger.debug("response_handler: {0}".format(buffer))
+        logger.debug("response_handler: {0}".format(buffer))
         return buffer
 
     @classmethod
     def default_request_handler(cls, buffer):
-        cls._logger.debug("request handler: {0}".format(buffer))
+        logger.debug("request handler: {0}".format(buffer))
         return buffer

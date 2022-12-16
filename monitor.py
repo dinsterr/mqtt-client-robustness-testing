@@ -74,14 +74,16 @@ def _monitor_process_output(process_handle: subprocess.Popen,
     return stdout_buffer, stderr_buffer, process_handle.returncode
 
 
+def _proxy():
+    threading.Thread(target=TcpProxy, args=(local_address, local_port, local_address, target_port),daemon=True).start()
+
+
 if __name__ == "__main__":
     # Spawn the proxy
-    proxy = TcpProxy(local_address, local_port, local_address, target_port)
-    thread = threading.Thread(target=proxy.run, daemon=True)
-    thread.run()
+    _proxy()
 
     # Run the subprocess which should be monitored
-    command_line = f"bash ./send.sh {target_address} {target_port}"
+    command_line = f"bash ./send.sh {local_address} {local_port}"
     main_logger.debug("Starting subprocess: " + command_line)
 
     process = subprocess.Popen(shlex.split(command_line), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -93,4 +95,3 @@ if __name__ == "__main__":
 
     main_logger.debug("Subprocess finished")
     main_logger.debug("Stopped monitor")
-    exit()
