@@ -1,6 +1,6 @@
 import logging
 
-formatter = logging.Formatter(fmt='%(asctime)-16s | %(name)-11s | %(threadName)-21s | %(levelname)-7s | %(message)s',
+formatter = logging.Formatter(fmt='%(asctime)-16s | %(name)-15s | %(threadName)-21s | %(levelname)-7s | %(message)s',
                               datefmt='%d-%m-%Y %H:%M:%S')
 
 
@@ -14,7 +14,7 @@ def construct_logger(name: str):
     logger.addHandler(fh)
 
     ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
+    ch.setLevel(logging.INFO)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 

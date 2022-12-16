@@ -5,7 +5,6 @@ import selectors
 from time import sleep
 from typing import Callable
 
-from monitor import tcp_proxy
 import logger_factory
 from monitor.tcp_proxy import TcpProxy
 
@@ -20,6 +19,8 @@ target_port = 12345
 
 main_logger = logger_factory.construct_logger("monitor")
 subprocess_logger = logger_factory.construct_logger("subprocess")
+
+is_only_log_if_non_zero_exit_code = True
 
 
 def _monitor_process_output(process_handle: subprocess.Popen,
@@ -74,24 +75,29 @@ def _monitor_process_output(process_handle: subprocess.Popen,
     return stdout_buffer, stderr_buffer, process_handle.returncode
 
 
-def _proxy():
-    threading.Thread(target=TcpProxy, args=(local_address, local_port, local_address, target_port),daemon=True).start()
+def _proxy(local_address, local_port, target_address, target_port):
+    threading.Thread(target=TcpProxy, args=(local_address, local_port, local_address, target_port), daemon=True).start()
+
+
+def _run_monitored_subprocess():
+    # Run the subprocess which should be monitored
+    command_line = f"bash ./send.sh {local_address} {local_port}"
+    main_logger.info("Starting subprocess: " + command_line)
+
+    process = subprocess.Popen(shlex.split(command_line), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout_buffer, stderr_buffer, return_code = _monitor_process_output(process, None, None)
+
+    if not is_only_log_if_non_zero_exit_code \
+            or (is_only_log_if_non_zero_exit_code and return_code != 0):
+        subprocess_logger.info(f"STDOUT: {stdout_buffer}")
+        subprocess_logger.info(f"STDERR: {stderr_buffer}")
+        subprocess_logger.info(f"RETURN: {return_code}")
+        main_logger.info("Subprocess finished")
 
 
 if __name__ == "__main__":
-    # Spawn the proxy
-    _proxy()
+    main_logger.info(f"Starting proxy: {local_address}:{local_port} -> {target_address}:{target_port}")
+    _proxy(local_address, local_port, target_address, target_port)
 
-    # Run the subprocess which should be monitored
-    command_line = f"bash ./send.sh {local_address} {local_port}"
-    main_logger.debug("Starting subprocess: " + command_line)
-
-    process = subprocess.Popen(shlex.split(command_line), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout_buffer, stderr_buffer, returncode = _monitor_process_output(process, None, None)
-
-    subprocess_logger.debug(f"STDOUT: {stdout_buffer}")
-    subprocess_logger.debug(f"STDERR: {stderr_buffer}")
-    subprocess_logger.debug(f"RETURN: {returncode}")
-
-    main_logger.debug("Subprocess finished")
-    main_logger.debug("Stopped monitor")
+    _run_monitored_subprocess()
+    main_logger.debug("Stopped monitoring")
