@@ -51,7 +51,6 @@ class Listener(object):
                     client_thread = ClientThread(client_socket, client_address, self, self._subscription_manager,
                                                  self._client_manager, self.debug)
                     self.open_sockets[str(client_address) + '_LT'] = client_thread
-                    client_thread.setDaemon(True)
                     client_thread.start()
 
                     if self._is_auto_publish:
@@ -60,7 +59,6 @@ class Listener(object):
                                                                 self._auto_publish_interval,
                                                                 self._message_generator_config, self.debug)
                         self.open_sockets[str(client_address) + '_APT'] = client_thread
-                        client_thread.setDaemon(True)
                         client_thread.start()
             except ConnectionAbortedError:
                 logger.logging.info("Closed socket connection of Listener.")
@@ -73,7 +71,8 @@ class Listener(object):
         if len(self.open_sockets) != 0:
             logger.logging.info("--- Closing open client connections")
             for index, client_thread in enumerate(self.open_sockets):
-                self.open_sockets[index].close()
+                if self.open_sockets[index]:
+                    self.open_sockets[index].close()
             logger.logging.info("--- All open client connections were successfully closed.")
 
     @property

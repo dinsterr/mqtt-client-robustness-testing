@@ -12,7 +12,7 @@ from broker.message_generators.message_generator import MessageGenerator as Base
 
 found_generators = []
 package_dir = Path(__file__).resolve().parent
-for (parent_path, module_name, is_package) in iter_modules([package_dir]):
+for (parent_path, module_name, is_package) in iter_modules([str(package_dir)]):
     if is_package:
         continue
 

@@ -137,7 +137,7 @@ class ListenerConfig(object):
     """
 
     def __init__(self):
-        self._port = 1883  # Port for the listener
+        self._port = 8088  # Port for the listener TODO: read from config
         self._is_auto_publish = False
         self._auto_publish_interval = 5
         self._message_generator_config: MessageGeneratorConfig = MessageGeneratorConfig()

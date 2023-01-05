@@ -12,7 +12,7 @@ class ClientThread(threading.Thread):
     """
 
     def __init__(self, client_socket, client_address, listener, subscription_manager, client_manager, debug):
-        super().__init__()
+        super().__init__(daemon=True)
         self.client_socket = client_socket
         self.client_address = client_address
         self._running = True
