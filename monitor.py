@@ -1,7 +1,7 @@
+import selectors
 import shlex
 import subprocess
 import threading
-import selectors
 from time import sleep
 from typing import Callable
 
@@ -76,13 +76,14 @@ def _monitor_process_output(process_handle: subprocess.Popen,
 
 
 def _proxy(local_address, local_port, target_address, target_port):
-    threading.Thread(target=TcpProxy, args=(local_address, local_port, local_address, target_port), daemon=True).start()
+    threading.Thread(target=TcpProxy, args=(local_address, local_port, target_address, target_port),
+                     daemon=True).start()
 
 
 def _run_monitored_subprocess():
     # Run the subprocess which should be monitored
     command_line = f"bash ./send.sh {local_address} {local_port}"
-    main_logger.info("Starting subprocess: " + command_line)
+    main_logger.info(f"Starting subprocess: \"{command_line}")
 
     process = subprocess.Popen(shlex.split(command_line), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout_buffer, stderr_buffer, return_code = _monitor_process_output(process, None, None)
