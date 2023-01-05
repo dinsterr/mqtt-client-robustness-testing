@@ -13,14 +13,14 @@ from monitor.tcp_proxy import TcpProxy
 # TODO: configurable timeouts (also of sub thread)
 
 local_address = "localhost"
-local_port = 8088
+local_port = 1883
 target_address = "localhost"
-target_port = 12345
+target_port = 8088
 
 main_logger = logger_factory.construct_logger("monitor")
 subprocess_logger = logger_factory.construct_logger("subprocess")
 
-is_only_log_if_non_zero_exit_code = True
+is_only_log_if_non_zero_exit_code = False
 
 
 def _monitor_process_output(process_handle: subprocess.Popen,
@@ -49,15 +49,9 @@ def _monitor_process_output(process_handle: subprocess.Popen,
             # Pass data to the relevant handler and add the result to the respective buffer
             has_data = True
             if key.fileobj is process_handle.stdout:
-                if stdout_handler is None:
-                    stdout_buffer += data
-                else:
-                    stdout_buffer += stdout_handler(data)
+                stdout_buffer += data if stdout_handler is None else stdout_handler(data)
             else:
-                if stderr_handler is None:
-                    stderr_buffer += data
-                else:
-                    stderr_handler(data)
+                stderr_buffer += data if stderr_handler is None else stderr_handler(data)
 
         # If no data was read in this iteration we increase the no_data_counter and sleep
         if has_data:
@@ -70,6 +64,8 @@ def _monitor_process_output(process_handle: subprocess.Popen,
                 break
 
             sleep(monitor_frequency_secs)
+        # TODO: print here?
+        # TODO: why should we  even exit if no output?
 
     process_handle.poll()
     return stdout_buffer, stderr_buffer, process_handle.returncode
@@ -82,8 +78,9 @@ def _proxy(local_address, local_port, target_address, target_port):
 
 def _run_monitored_subprocess():
     # Run the subprocess which should be monitored
-    command_line = f"bash ./send.sh {local_address} {local_port}"
-    main_logger.info(f"Starting subprocess: \"{command_line}")
+    # command_line = f"bash ./send.sh {local_address} {local_port}"
+    command_line = "mqtt sub -t foo"
+    main_logger.info(f"Starting subprocess: \"{command_line}\"")
 
     process = subprocess.Popen(shlex.split(command_line), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout_buffer, stderr_buffer, return_code = _monitor_process_output(process, None, None)
