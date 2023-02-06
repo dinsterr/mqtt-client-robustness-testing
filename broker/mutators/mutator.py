@@ -3,7 +3,7 @@
 import random
 import json
 
-from utils.tree import *
+from mutators.utils.tree import *
 
 DEFAULT_COMMAND = "touch file"
 FILTER_LIST = []

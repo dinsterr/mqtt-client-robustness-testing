@@ -21,5 +21,5 @@ class MessageGenerator(object):
         raise ModuleNotFoundError(f"Failed to find a valid generator of type '{generator_config.generator_type}'!")
 
     @abstractmethod
-    def __next__(self):
+    def __next__(self) -> bytes:
         pass
