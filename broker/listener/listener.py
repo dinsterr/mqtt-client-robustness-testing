@@ -71,8 +71,8 @@ class Listener(object):
         if len(self.open_sockets) != 0:
             logger.logging.info("--- Closing open client connections")
             for index, client_thread in enumerate(self.open_sockets):
-                if self.open_sockets[index]:
-                    self.open_sockets[index].close()
+                if self.open_sockets.get(index):
+                    self.open_sockets.get(index).close()
             logger.logging.info("--- All open client connections were successfully closed.")
 
     @property

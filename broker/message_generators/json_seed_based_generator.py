@@ -1,5 +1,6 @@
 from broker.message_generators.message_generator import MessageGenerator
 from packets.mqtt_packet_manager import MQTTPacketManager
+
 import logging
 import json
 
@@ -13,10 +14,10 @@ SEED_FILE_PATH = "/home/schrenkdav/PycharmProjects/auto-mqtt-broker/seed_files/t
 
 class JsonSeedBasedMessageGenerator(MessageGenerator):
     _GENERATOR_TYPE = "JSON_SEED"
-    _mutated_payloads = []
+    _mutated_payloads = None
 
     def __init__(self, generator_config):
-        self._mutated_payloads = self._load_payload_data()
+        self._mutated_payloads = iter(self._load_payload_data())
 
     def _load_payload_data(self):
         with open(SEED_FILE_PATH) as json_file:
@@ -30,5 +31,4 @@ class JsonSeedBasedMessageGenerator(MessageGenerator):
         return payloads
 
     def __next__(self):
-        for payload in self._mutated_payloads:
-            return MQTTPacketManager.prepare_publish(self._generator_config.topic, payload)
+        return MQTTPacketManager.prepare_publish(self._generator_config.topic, next(self._mutated_payloads))
