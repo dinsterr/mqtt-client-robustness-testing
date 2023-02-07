@@ -92,6 +92,8 @@ class Listener(object):
         self._port = value
 
     def remove_client_thread(self, client_thread):
-        self.open_sockets.pop(str(client_thread.client_address) + '_LT')
-        self.open_sockets.pop(str(client_thread.client_address) + '_APT')
-        logger.logging.info(f"- Successfully closed threads, that managed '{client_thread.client_id}'")
+        if self.open_sockets.get(str(client_thread.client_address) + '_LT'):
+            self.open_sockets.pop(str(client_thread.client_address) + '_LT')
+        if self.open_sockets.get(str(client_thread.client_address) + '_APT'):
+            self.open_sockets.pop(str(client_thread.client_address) + '_APT')
+        logger.logging.info(f"- Successfully closed threads that managed '{client_thread.client_address}'")

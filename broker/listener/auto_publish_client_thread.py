@@ -29,7 +29,18 @@ class AutoPublishClientThread(ClientThread):
             self.close()
 
     def publish(self):
-        topic = 'foo'
-        msg = next(self._message_generator)
+        topic = self._generator_config.topic
+        try:
+            msg = next(self._message_generator)
+        except StopIteration:
+            msg = None
+
+        if msg is None:
+            logger.logging.info(f"Exhausted message generator {self._message_generator.get_generator_type()}. "
+                                f"Closing connection.")
+            self._running = False
+            self.close()
+            return
+
         logger.logging.info(f"Sent publish message '{msg}' in '{topic}' to Client {self.client_id}")
         self.client_socket.send(msg)
