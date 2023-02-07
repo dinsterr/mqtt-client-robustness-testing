@@ -20,7 +20,8 @@ target_port = 8088
 main_logger = logger_factory.construct_logger("monitor")
 subprocess_logger = logger_factory.construct_logger("subprocess")
 
-is_only_log_if_non_zero_exit_code = False
+is_only_log_if_non_zero_exit_code = True
+return_code_filter = [0, 130]
 
 
 def _monitor_process_output(process_handle: subprocess.Popen,
@@ -41,17 +42,20 @@ def _monitor_process_output(process_handle: subprocess.Popen,
     no_data_counter = 0
     while no_data_counter < (monitor_timeout_secs / monitor_frequency_secs):
         has_data = False
-        for key, _ in sel.select(timeout=max_timeout_until_io_is_ready_secs):
-            data = key.fileobj.read1()
-            if not data:
-                break
+        try:
+            for key, _ in sel.select(timeout=max_timeout_until_io_is_ready_secs):
+                data = key.fileobj.read1()
+                if not data:
+                    break
 
-            # Pass data to the relevant handler and add the result to the respective buffer
-            has_data = True
-            if key.fileobj is process_handle.stdout:
-                stdout_buffer += data if stdout_handler is None else stdout_handler(data)
-            else:
-                stderr_buffer += data if stderr_handler is None else stderr_handler(data)
+                # Pass data to the relevant handler and add the result to the respective buffer
+                has_data = True
+                if key.fileobj is process_handle.stdout:
+                    stdout_buffer += data if stdout_handler is None else stdout_handler(data)
+                else:
+                    stderr_buffer += data if stderr_handler is None else stderr_handler(data)
+        except KeyboardInterrupt:
+            main_logger.info("Stopped subprocess monitor")
 
         # If no data was read in this iteration we increase the no_data_counter and sleep
         if has_data:
@@ -79,18 +83,23 @@ def _proxy(local_address, local_port, target_address, target_port):
 def _run_monitored_subprocess():
     # Run the subprocess which should be monitored
     # command_line = f"bash ./send.sh {local_address} {local_port}"
-    command_line = "mqtt sub -t foo"
+    command_line = f"java -jar /home/schrenkdav/Projects/mqtt-cli/build/libs/mqtt-cli-4.8.2-SNAPSHOT.jar sub -t foo -p {local_port}"
     main_logger.info(f"Starting subprocess: \"{command_line}\"")
 
     process = subprocess.Popen(shlex.split(command_line), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout_buffer, stderr_buffer, return_code = _monitor_process_output(process, None, None)
 
     if not is_only_log_if_non_zero_exit_code \
-            or (is_only_log_if_non_zero_exit_code and return_code != 0):
+            or (is_only_log_if_non_zero_exit_code and return_code in return_code_filter):
+        # TODO: Move logs if case is true to archive test run
         subprocess_logger.info(f"STDOUT: {stdout_buffer}")
         subprocess_logger.info(f"STDERR: {stderr_buffer}")
         subprocess_logger.info(f"RETURN: {return_code}")
         main_logger.info("Subprocess finished")
+
+    # TODO: monitor pingreq packets to detect failure?
+
+    process.terminate()
 
 
 if __name__ == "__main__":

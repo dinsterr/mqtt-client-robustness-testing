@@ -94,10 +94,10 @@ class TcpProxy:
             match socket_type:
                 case SocketType.LOCAL:
                     modified_buffer = TcpProxy.default_request_interceptor(buffer, socket_type)
-                    cls._logger.debug(f"Sending buffer to {SocketType.REMOTE}")
+                    #cls._logger.debug(f"Sending buffer to {SocketType.REMOTE}")
                 case SocketType.REMOTE:
                     modified_buffer = TcpProxy.default_response_interceptor(buffer, socket_type)
-                    cls._logger.debug(f"Sending buffer to {SocketType.LOCAL}")
+                    #cls._logger.debug(f"Sending buffer to {SocketType.LOCAL}")
                 case _:
                     # Should never be reached
                     raise ValueError(f"Invalid socket type {type}")
