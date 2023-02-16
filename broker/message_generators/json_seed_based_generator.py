@@ -9,7 +9,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from mutators.mutator import JsonMutator
 
-SEED_FILE_PATH = "/home/schrenkdav/PycharmProjects/auto-mqtt-broker/seed_files/test.json"
+SEED_FILE_PATH = "seed_files/test.json"
 
 
 class JsonSeedBasedMessageGenerator(MessageGenerator):

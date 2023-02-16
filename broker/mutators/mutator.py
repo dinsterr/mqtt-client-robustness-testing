@@ -1,4 +1,4 @@
-# TODO: attribution!!!
+# Taken from: https://github.com/ReAbout/ShadowFuzzer/blob/main/Fuzzer/mutator.py
 
 import random
 import json
