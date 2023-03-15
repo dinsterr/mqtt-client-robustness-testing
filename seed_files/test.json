@@ -1,9 +1,5 @@
 {
-  "name": "Jon Doe",
-  "age:": "25",
-  "isMarried": false,
-  "balance": "123.4",
-  "favoriteCommands": [
-    "echo test"
-  ]
+  "name": "John Doe",
+  "age": 25,
+  "isMarried": false
 }

@@ -241,17 +241,17 @@ class JsonMutator:
         def apply_mutations(leaf, tree):
             if leaf.data[0] not in FILTER_LIST:
                 former = leaf.data
-                for mu in self.get_applicable_mutator(leaf.data[1]):
-                    if type(leaf.data[1]) == str and mu != "":
-                        leaf.data = (leaf.data[0], leaf.data[1] + mu)
+                for mutator in self.get_applicable_mutator(leaf.data[1]):
+                    if type(leaf.data[1]) == str and mutator != "":
+                        leaf.data = (leaf.data[0], leaf.data[1] + mutator)
                     elif type(leaf.data[1]) == str:
                         leaf.data = (leaf.data[0], "")
                     elif leaf.data[1] is None:
-                        leaf.data = (leaf.data[0], mu)
-                    elif callable(mu):
-                        leaf.data = (leaf.data[0], mu(leaf.data[1]))
+                        leaf.data = (leaf.data[0], mutator)
+                    elif callable(mutator):
+                        leaf.data = (leaf.data[0], mutator(leaf.data[1]))
                     else:
-                        leaf.data = (leaf.data[0], mu)
+                        leaf.data = (leaf.data[0], mutator)
                     mutated_tree.append(json.dumps(tree2dict(tree)))
                     leaf.data = former
 

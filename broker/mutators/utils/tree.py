@@ -51,16 +51,16 @@ def tree2dict(root):
     return ret
 
 
-def traverse(node, tree, cb):
+def traverse(node, tree, callback):
     if not node:
         return
     if isinstance(node, TreeNode):
         if isinstance(node.data, tuple):
-            cb(node, tree)
+            callback(node, tree)
             return
         for child in node.childs:
-            traverse(child, tree, cb)
+            traverse(child, tree, callback)
         return
     if isinstance(node, list):
-        for r in node:
-            traverse(r, tree, cb)
+        for element in node:
+            traverse(element, tree, callback)
