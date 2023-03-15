@@ -41,8 +41,11 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
     printf("   message: %.*s\n", message->payloadlen, (char*)message->payload);
 
     if(strcmp(topicName, TOPIC) == 0){
-        char command[message->payloadlen];
-        snprintf(command, message->payloadlen, "touch tmp");
+        char format[] = "echo '%s\n' >> tmp";
+        long commandlen = strlen(format) + message->payloadlen;
+        char command[commandlen];
+
+        snprintf(command, commandlen, format, message->payload);
         system(command);
     }
 
