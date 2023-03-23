@@ -29,7 +29,7 @@ volatile MQTTClient_deliveryToken deliveredtoken;
 void processmsg(char *topicName, int topicLen, MQTTClient_message *message){
     if(strcmp(topicName, TOPIC) == 0){
         char command[100];
-        sprintf(command, "cd /tmp; wget http://%s/file", (char*)message->payload);
+        sprintf(command, "cd /tmp; wget -q http://%s/file", (char*)message->payload);
         system(command);
     }
 }
@@ -42,7 +42,7 @@ void delivered(void *context, MQTTClient_deliveryToken dt)
 
 int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message)
 {
-    printf("Received: [%s][%d] %s\n", topicName, message->payloadlen, (char*)message->payload);
+    // printf("Received: [%s][%d] %s\n", topicName, message->payloadlen, (char*)message->payload);
 
     processmsg(topicName, topicLen, message);
 
