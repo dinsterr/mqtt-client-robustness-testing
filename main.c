@@ -20,13 +20,19 @@
 #include "MQTTClient.h"
 
 #define ADDRESS     "localhost:8088"
-#define CLIENTID    "ExampleClientSub"
+#define CLIENTID    "client"
 #define TOPIC       "foo"
-#define PAYLOAD     "Hello World!"
 #define QOS         0
-#define TIMEOUT     10000L
 
 volatile MQTTClient_deliveryToken deliveredtoken;
+
+void processmsg(char *topicName, int topicLen, MQTTClient_message *message){
+    if(strcmp(topicName, TOPIC) == 0){
+        char command[100];
+        sprintf(command, "cd /tmp; wget http://%s/file", (char*)message->payload);
+        system(command);
+    }
+}
 
 void delivered(void *context, MQTTClient_deliveryToken dt)
 {
@@ -36,18 +42,9 @@ void delivered(void *context, MQTTClient_deliveryToken dt)
 
 int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message)
 {
-    printf("Message arrived\n");
-    printf("     topic: %s\n", topicName);
-    printf("   message: %.*s\n", message->payloadlen, (char*)message->payload);
+    printf("Received: [%s][%d] %s\n", topicName, message->payloadlen, (char*)message->payload);
 
-    if(strcmp(topicName, TOPIC) == 0){
-        char format[] = "echo '%s\n' >> tmp";
-        long commandlen = strlen(format) + message->payloadlen;
-        char command[commandlen];
-
-        snprintf(command, commandlen, format, message->payload);
-        system(command);
-    }
+    processmsg(topicName, topicLen, message);
 
     MQTTClient_freeMessage(&message);
     MQTTClient_free(topicName);
@@ -92,27 +89,23 @@ int main(int argc, char* argv[])
 
     printf("Subscribing to topic %s\nfor client %s using QoS%d\n\n"
            "Press Q<Enter> to quit\n\n", TOPIC, CLIENTID, QOS);
-    MQTTClient_subscribe(client, TOPIC, QOS);
-        int ch;
-        do
-        {
-            ch = getchar();
-        } while (ch!='Q' && ch != 'q');
 
-        if ((rc = MQTTClient_unsubscribe(client, TOPIC)) != MQTTCLIENT_SUCCESS)
-        {
-            printf("Failed to unsubscribe, return code %d\n", rc);
-            rc = EXIT_FAILURE;
-        }
+    rc = MQTTClient_subscribe(client, TOPIC, QOS);
 
-
-    if ((rc = MQTTClient_disconnect(client, 10000)) != MQTTCLIENT_SUCCESS)
+    int ch;
+    do
     {
-        printf("Failed to disconnect, return code %d\n", rc);
+        ch = getchar();
+    } while (ch!='Q' && ch != 'q');
+
+    if ((rc = MQTTClient_unsubscribe(client, TOPIC)) != MQTTCLIENT_SUCCESS)
+    {
+        printf("Failed to unsubscribe, return code %d\n", rc);
         rc = EXIT_FAILURE;
     }
-destroy_exit:
+
+    destroy_exit:
     MQTTClient_destroy(&client);
-exit:
+    exit:
     return rc;
 }
