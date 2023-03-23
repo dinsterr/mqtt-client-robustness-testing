@@ -18,7 +18,7 @@ class MessageGenerator(object):
                 self = object.__new__(subclass)
                 self._generator_config = generator_config
                 return self
-        raise ModuleNotFoundError(f"Failed to find a valid generator of type '{generator_config.generator_type}'!")
+        raise ModuleNotFoundError(f"Failed to find a valid generator of type 'f{generator_config.generator_type}'!")
 
     def get_generator_type(self):
         return self._GENERATOR_TYPE

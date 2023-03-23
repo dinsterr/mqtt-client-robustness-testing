@@ -131,7 +131,7 @@ class MQTTPacketManager(object):
         topic_name = bytes(topic.encode('utf-8'))
         topic_length = topic_length or len(topic_name)
 
-        packet_identifier = packet_identifier or 0
+        packet_identifier = packet_identifier or 1
 
         # payload
         encoded_payload = bytes(payload.encode('utf-8'))

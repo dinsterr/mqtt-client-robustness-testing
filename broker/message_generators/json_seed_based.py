@@ -12,7 +12,7 @@ from mutators.mutator import JsonMutator
 SEED_FILE_PATH = "seed_files/test.json"
 
 
-class JsonSeedBasedMessageGenerator(MessageGenerator):
+class JsonSeedBased(MessageGenerator):
     _GENERATOR_TYPE = "JSON_SEED"
     _mutated_payloads = None
 

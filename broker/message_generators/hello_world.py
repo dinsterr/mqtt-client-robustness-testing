@@ -2,7 +2,7 @@ from broker.message_generators.message_generator import MessageGenerator
 from packets.mqtt_packet_manager import MQTTPacketManager
 
 
-class HelloWorldMessageGenerator(MessageGenerator):
+class HelloWorld(MessageGenerator):
     _GENERATOR_TYPE = "HELLO_WORLD"
 
     def __next__(self):

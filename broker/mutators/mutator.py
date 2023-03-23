@@ -5,7 +5,7 @@ import json
 
 from mutators.utils.tree import *
 
-DEFAULT_COMMAND = "touch file"
+DEFAULT_COMMAND = "id"
 FILTER_LIST = []
 
 

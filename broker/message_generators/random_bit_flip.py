@@ -7,7 +7,7 @@ RANDOM = Random()
 BIT_FLIP_PROBABILITY = 1 / 3
 
 
-class RandomBitFlipGenerator(MessageGenerator):
+class RandomBitFlip(MessageGenerator):
     _GENERATOR_TYPE = "BIT_FLIP"
 
     _message: bytes = None
