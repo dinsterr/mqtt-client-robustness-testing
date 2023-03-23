@@ -28,8 +28,8 @@ def _monitor_process_output(process_handle: subprocess.Popen,
                             stdout_handler: Callable[[bytes], bytes] = None,
                             stderr_handler: Callable[[bytes], bytes] = None,
                             monitor_frequency_secs: float = 0.1,
-                            monitor_timeout_secs: float = 5,
-                            max_timeout_until_io_is_ready_secs: float = 10) -> tuple[bytes, bytes, int]:
+                            monitor_timeout_secs: float = 2,
+                            max_timeout_until_io_is_ready_secs: float = 5) -> tuple[bytes, bytes, int]:
     stdout_buffer = b""
     stderr_buffer = b""
 
@@ -68,8 +68,6 @@ def _monitor_process_output(process_handle: subprocess.Popen,
                 break
 
             sleep(monitor_frequency_secs)
-        # TODO: print here?
-        # TODO: why should we  even exit if no output?
 
     process_handle.poll()
     return stdout_buffer, stderr_buffer, process_handle.returncode
@@ -80,22 +78,32 @@ def _proxy(local_address, local_port, target_address, target_port):
                      daemon=True).start()
 
 
+def _stdout_hander(data: bytes) -> bytes:
+    try:
+        if data.decode("utf-8").find("uid") > -1:
+            subprocess_logger.info(data)
+    finally:
+        return b""
+
+
 def _run_monitored_subprocess():
     # Run the subprocess which should be monitored
     # command_line = f"bash ./send.sh {local_address} {local_port}"
-    command_line = f"java -jar /home/schrenkdav/Projects/mqtt-cli/build/libs/mqtt-cli-4.8.2-SNAPSHOT.jar sub -t foo -p {local_port}"
+    #command_line = f"java -jar /home/schrenkdav/Projects/mqtt-cli/build/libs/mqtt-cli-4.8.2-SNAPSHOT.jar sub -t foo -p {local_port}"
+    command_line = f"/home/schrenkdav/CLionProjects/fuzzing_targets/fuzzing_targets"
     main_logger.info(f"Starting subprocess: \"{command_line}\"")
 
     process = subprocess.Popen(shlex.split(command_line), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout_buffer, stderr_buffer, return_code = _monitor_process_output(process, None, None)
+    stdout_buffer, stderr_buffer, return_code = _monitor_process_output(process,
+                                                                        stdout_handler=_stdout_hander,
+                                                                        stderr_handler=_stdout_hander)
 
-    if not is_only_log_if_non_zero_exit_code \
-            or (is_only_log_if_non_zero_exit_code and return_code in return_code_filter):
-        # TODO: Move logs if case is true to archive test run
-        subprocess_logger.info(f"STDOUT: {stdout_buffer}")
-        subprocess_logger.info(f"STDERR: {stderr_buffer}")
-        subprocess_logger.info(f"RETURN: {return_code}")
-        main_logger.info("Subprocess finished")
+    #if not is_only_log_if_non_zero_exit_code or (is_only_log_if_non_zero_exit_code and return_code in return_code_filter):
+    # TODO: Move logs if case is true to archive test run
+    subprocess_logger.info(f"STDOUT: {stdout_buffer}")
+    subprocess_logger.info(f"STDERR: {stderr_buffer}")
+    subprocess_logger.info(f"RETURN: {return_code}")
+    main_logger.info("Subprocess finished")
 
     # TODO: monitor pingreq packets to detect failure?
 
