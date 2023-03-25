@@ -8,8 +8,10 @@ import logger_factory
 
 from time import sleep
 from enum import Enum
+from config import Config
 
-MAX_CONNECTION_TIMEOUT_SECS = 2
+READ_TIMEOUT_PER_BUFFER = 0.1
+
 LOGGER = logger_factory.construct_logger("proxy")
 TCP_FROM_LOCAL_LOGGER = logger_factory.construct_logger("TCP_FROM_LOCAL")
 TCP_FROM_REMOTE_LOGGER = logger_factory.construct_logger("TCP_FROM_REMOTE")
@@ -37,8 +39,6 @@ class TcpProxy:
         self.start()
 
     def __del__(self):
-        # TODO: Is this the cleanest way? Should we be more careful?
-
         self._logger.debug(f"Closing all sockets")
 
         # Close potentially remaining sockets
@@ -79,6 +79,8 @@ class TcpProxy:
 
         self._logger.info(f"Established connection to remote at {self._remote_host}:{self._remote_port}")
 
+        _iterations_without_new_remote_data = 0
+        _iterations_without_new_local_data = 0
         # Continually read from local and remote and forward to the other socket
         while True:
             local_buffer = TcpProxy._receive_from_socket(local_socket)
@@ -88,16 +90,31 @@ class TcpProxy:
             remote_buffer = TcpProxy._receive_from_socket(self._remote_socket)
             TcpProxy._send_data(remote_buffer, SocketType.REMOTE, local_socket)
 
+            if len(remote_buffer) == 0:
+                _iterations_without_new_remote_data += 1
+            else:
+                _iterations_without_new_remote_data = 0
+
+            if len(local_buffer) == 0:
+                _iterations_without_new_local_data += 1
+            else:
+                _iterations_without_new_local_data = 0
+
+            if _iterations_without_new_remote_data >= READ_TIMEOUT_PER_BUFFER * Config.MAX_REMOTE_TCP_TIMEOUT_SECS:
+                break
+
+            if _iterations_without_new_local_data >= READ_TIMEOUT_PER_BUFFER * Config.MAX_LOCAL_TCP_TIMEOUT_SECS:
+                break
+
+
     @classmethod
     def _send_data(cls, buffer, socket_type, target_socket):
         if len(buffer):
             match socket_type:
                 case SocketType.LOCAL:
                     modified_buffer = TcpProxy.default_request_interceptor(buffer, socket_type)
-                    #cls._logger.debug(f"Sending buffer to {SocketType.REMOTE}")
                 case SocketType.REMOTE:
                     modified_buffer = TcpProxy.default_response_interceptor(buffer, socket_type)
-                    #cls._logger.debug(f"Sending buffer to {SocketType.LOCAL}")
                 case _:
                     # Should never be reached
                     raise ValueError(f"Invalid socket type {type}")
@@ -112,8 +129,8 @@ class TcpProxy:
     def _receive_from_socket(cls, connection):
         buffer = b""
 
-        # Wait for a maximum of X seconds to receive new data
-        connection.settimeout(0.1)
+        # Wait for a maximum of X seconds to receive new data on the buffer
+        connection.settimeout(READ_TIMEOUT_PER_BUFFER)
         try:
             while True:
                 # Blocking read data in blocks of X bytes
