@@ -4,10 +4,10 @@
 # San Francisco: No Starch Press, 2021.
 
 import socket
-import logger_factory
-
-from time import sleep
 from enum import Enum
+from time import sleep
+
+import logger_factory
 from config import Config
 
 READ_TIMEOUT_PER_BUFFER = 0.1
@@ -105,7 +105,6 @@ class TcpProxy:
 
             if _iterations_without_new_local_data >= READ_TIMEOUT_PER_BUFFER * Config.MAX_LOCAL_TCP_TIMEOUT_SECS:
                 break
-
 
     @classmethod
     def _send_data(cls, buffer, socket_type, target_socket):

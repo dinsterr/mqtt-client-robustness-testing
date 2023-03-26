@@ -5,10 +5,9 @@ from datetime import datetime
 
 import logger_factory
 from config import Config
-from monitor.tcp_proxy import TcpProxy
 from monitor.process_monitor import ProcessMonitor
 from monitor.process_monitor import ProcessResult
-
+from monitor.tcp_proxy import TcpProxy
 
 # TODO: correctly terminate all threads
 # TODO: Move logs if case is true to archive test run

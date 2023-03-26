@@ -40,7 +40,7 @@ class Config:
     # Archives all logs in a new directory if the code is returned.
     RETURN_CODES_VALUE_FILTER: list[int] = [1]
 
-     # The time in seconds that the monitor waits for new TCP data from the system under test before closing.
+    # The time in seconds that the monitor waits for new TCP data from the system under test before closing.
     MAX_LOCAL_TCP_TIMEOUT_SECS = 5
 
     # The time in seconds that the monitor waits for new TCP data from the broker before closing.

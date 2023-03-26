@@ -4,8 +4,8 @@ import shlex
 import subprocess
 from typing import Callable
 
-from config import Config
 import logger_factory
+from config import Config
 
 main_logger = logger_factory.get_logger("monitor")
 subprocess_logger = logger_factory.get_logger("subprocess")
@@ -51,8 +51,8 @@ class ProcessMonitor:
 
     def run_to_completion(self) -> ProcessResult:
         return self._monitor_process_output(self.process_handle,
-                                     stdout_handler=_regex_matcher_on_buffer,
-                                     stderr_handler=_regex_matcher_on_buffer)
+                                            stdout_handler=_regex_matcher_on_buffer,
+                                            stderr_handler=_regex_matcher_on_buffer)
 
     def _monitor_process_output(self, process_handle: subprocess.Popen,
                                 stdout_handler: Callable[[bytes], bytes] = None,
