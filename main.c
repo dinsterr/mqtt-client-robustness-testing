@@ -14,12 +14,20 @@
  *    Ian Craggs - initial contribution
  *******************************************************************************/
 
+/*****
+ * Adapted to present command injection and buffer overflow vulnerabilities via a malicious PUBLISH message.
+ * - Added command line argument parsing for broker IP, port, MQTT topic
+ * - Added the processmsg method that processes incoming PUBLISH messages and shows the vulnerabilities
+ *****/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <getopt.h>
 #include "MQTTClient.h"
 
-#define ADDRESS     "localhost:8088"
+#define ADDRESS     "localhost"
+#define PORT        "8088"
 #define CLIENTID    "client"
 #define TOPIC       "foo"
 #define QOS         0
@@ -27,9 +35,12 @@
 volatile MQTTClient_deliveryToken deliveredtoken;
 
 void processmsg(char *topicName, int topicLen, MQTTClient_message *message){
+    // Only process messages for the configured topic
     if(strcmp(topicName, TOPIC) == 0){
+        // Store the message with the remaining command in a limited char array
         char command[100];
         sprintf(command, "cd /tmp; wget -q http://%s/file", (char*)message->payload);
+        // Execute the complete command
         system(command);
     }
 }
@@ -57,13 +68,45 @@ void connlost(void *context, char *cause)
     printf("     cause: %s\n", cause);
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
+
+    char *address = ADDRESS;
+    char *port = PORT;
+    char *topic = TOPIC;
+    int qos = QOS;
+
+    opterr = 0;
+    int opt;
+    while ((opt = getopt(argc, argv, "a:p:t:q:")) != -1){
+        switch (opt) {
+            case 'a':
+                address = optarg;
+                break;
+            case 'p':
+                port = optarg;
+                break;
+            case 't':
+                topic = optarg;
+                break;
+            case 'q':
+                qos = atoi(optarg);
+                break;
+            case '?':
+                return 1;
+            default:
+                abort();
+        }
+    }
+
+    u_long full_address_size = strlen(address) + strlen(port);
+    char full_address[full_address_size];
+    sprintf(full_address, "%s:%s", address, port);
+
     MQTTClient client;
     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
     int rc;
 
-    if ((rc = MQTTClient_create(&client, ADDRESS, CLIENTID,
+    if ((rc = MQTTClient_create(&client, full_address, CLIENTID,
                                 MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
     {
         printf("Failed to create client, return code %d\n", rc);
@@ -82,13 +125,13 @@ int main(int argc, char* argv[])
     conn_opts.cleansession = 1;
     if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS)
     {
-        printf("Failed to connect, return code %d\n", rc);
+        printf("Failed to connect to %s, return code %d\n", full_address, rc);
         rc = EXIT_FAILURE;
         goto destroy_exit;
     }
 
     printf("Subscribing to topic %s\nfor client %s using QoS%d\n\n"
-           "Press Q<Enter> to quit\n\n", TOPIC, CLIENTID, QOS);
+           "Press Q<Enter> to quit\n\n", topic, CLIENTID, qos);
 
     rc = MQTTClient_subscribe(client, TOPIC, QOS);
 
@@ -98,14 +141,14 @@ int main(int argc, char* argv[])
         ch = getchar();
     } while (ch!='Q' && ch != 'q');
 
-    if ((rc = MQTTClient_unsubscribe(client, TOPIC)) != MQTTCLIENT_SUCCESS)
+    if ((rc = MQTTClient_unsubscribe(client, topic)) != MQTTCLIENT_SUCCESS)
     {
         printf("Failed to unsubscribe, return code %d\n", rc);
         rc = EXIT_FAILURE;
     }
 
-    destroy_exit:
+destroy_exit:
     MQTTClient_destroy(&client);
-    exit:
+exit:
     return rc;
 }
