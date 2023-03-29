@@ -8,7 +8,6 @@ import logger_factory
 from config import Config
 
 main_logger = logger_factory.get_logger("monitor")
-subprocess_logger = logger_factory.get_logger("subprocess")
 
 regex_buffer_filter = re.compile(Config.REGEX_BUFFER_FILTER_PATTERN)
 
@@ -43,7 +42,7 @@ class ProcessMonitor:
     def _monitor_process_output(self, process_handle: subprocess.Popen,
                                 stdout_handler: Callable[[bytes], bytes] = None,
                                 stderr_handler: Callable[[bytes], bytes] = None,
-                                monitor_frequency_secs: float = 2,
+                                monitor_frequency_secs: float = 0.1,
                                 monitor_timeout_secs: float = Config.MONITOR_BUFFER_READ_TIMEOUT_SECS) -> ProcessResult:
         stdout_buffer = b""
         stderr_buffer = b""
@@ -88,7 +87,7 @@ class ProcessMonitor:
 
                 # We also stop if the process has stopped
                 if process_handle.poll():
-                    subprocess_logger.debug(f"Subprocess exited with code: {process_handle.returncode}")
+                    main_logger.debug(f"Subprocess exited with code: {process_handle.returncode}")
                     break
 
         if no_data_counter >= max_iterations_without_new_data:

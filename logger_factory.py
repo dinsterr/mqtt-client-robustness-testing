@@ -6,28 +6,9 @@ import sys
 from config import Config
 
 LATEST_LOGS_DIR = f"{Config.BASE_LOGS_DIR}/latest"
-
 formatter = logging.Formatter(fmt='%(asctime)-16s | %(name)-15s | %(threadName)-21s | %(levelname)-7s | %(message)s',
                               datefmt='%d-%m-%Y %H:%M:%S')
-
-
-def construct_logger(name: str):
-    _setup_directories()
-
-    logger = logging.getLogger(f"{name}")
-    logger.setLevel(logging.DEBUG)
-
-    fh = logging.FileHandler(f'{LATEST_LOGS_DIR}/{name}.log')
-    fh.setLevel(Config.FILE_LOG_LEVEL)
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-
-    ch = logging.StreamHandler(stream=sys.stdout)
-    ch.setLevel(Config.STDOUT_LOG_LEVEL)
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-
-    return logger
+logging.root.setLevel(logging.DEBUG)
 
 
 def _setup_directories():
@@ -39,6 +20,27 @@ def _setup_directories():
         os.makedirs(LATEST_LOGS_DIR)
     except:
         pass
+
+
+_setup_directories()
+fh = logging.FileHandler(f'{LATEST_LOGS_DIR}/monitor.log')
+fh.setLevel(Config.FILE_LOG_LEVEL)
+fh.setFormatter(formatter)
+
+def construct_logger(name: str):
+
+    logger = logging.getLogger(f"{name}")
+    logger.propagate = False
+    logger.setLevel(logging.DEBUG)
+
+    ch = logging.StreamHandler(stream=sys.stdout)
+    ch.setLevel(Config.STDOUT_LOG_LEVEL)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    logger.addHandler(fh)
+
+    return logger
+
 
 
 def get_logger(name: str):

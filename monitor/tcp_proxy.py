@@ -5,14 +5,13 @@
 
 import socket
 from enum import Enum
-from time import sleep
 
 import logger_factory
 from config import Config
 
 READ_TIMEOUT_PER_BUFFER = 0.1
 
-LOGGER = logger_factory.construct_logger("proxy")
+LOGGER = logger_factory.get_logger("monitor")
 TCP_FROM_LOCAL_LOGGER = logger_factory.construct_logger("TCP_FROM_LOCAL")
 TCP_FROM_REMOTE_LOGGER = logger_factory.construct_logger("TCP_FROM_REMOTE")
 
@@ -22,7 +21,6 @@ class TcpProxy:
     _local_port: int
     _remote_host: str
     _remote_port: int
-    _logger = LOGGER
 
     _internal_server_socket = None
     _local_socket = None
@@ -39,7 +37,7 @@ class TcpProxy:
         self.start()
 
     def __del__(self):
-        self._logger.debug(f"Closing all sockets")
+        LOGGER.debug(f"Closing all sockets")
 
         # Close potentially remaining sockets
         if self._remote_socket is not None:
@@ -57,14 +55,11 @@ class TcpProxy:
     def _server_loop(self, local_host: str, local_port: int):
         self._internal_server_socket = socket.create_server((local_host, local_port))
 
-        while True:
-            self._logger.info(f"Waiting for connection on {local_host}:{local_port}")
-            self._local_socket, addr = self._internal_server_socket.accept()
+        LOGGER.info(f"Waiting for connection on {local_host}:{local_port}")
+        self._local_socket, addr = self._internal_server_socket.accept()
 
-            self._logger.info(f"Receiving connection from {addr[0]}:{addr[1]}")
-            self._proxy_handler(self._local_socket)
-
-            sleep(1)
+        LOGGER.info(f"Receiving connection from {addr[0]}:{addr[1]}")
+        self._proxy_handler(self._local_socket)
 
     def _proxy_handler(self, local_socket):
         # Define the remote socket used for forwarding requests
@@ -74,15 +69,15 @@ class TcpProxy:
         try:
             self._remote_socket.connect((self._remote_host, self._remote_port))
         except:
-            self._logger.exception(f"Could not create connection to remote at {self._remote_host}:{self._remote_port}")
+            LOGGER.exception(f"Could not create connection to remote at {self._remote_host}:{self._remote_port}")
             return
 
-        self._logger.info(f"Established connection to remote at {self._remote_host}:{self._remote_port}")
+        LOGGER.info(f"Established connection to remote at {self._remote_host}:{self._remote_port}")
 
         _iterations_without_new_remote_data = 0
         _iterations_without_new_local_data = 0
 
-        self._logger.info("Monitoring TCP connection...")
+        LOGGER.info("Monitoring TCP connection...")
         # Continually read from local and remote and forward to the other socket
         while True:
             local_buffer = TcpProxy._receive_from_socket(local_socket)
@@ -127,7 +122,7 @@ class TcpProxy:
             try:
                 target_socket.sendall(modified_buffer)
             except Exception as e:
-                cls._logger.debug(f"Could not send data to target socket: {e.__class__}")
+                LOGGER.debug(f"Could not send data to target socket: {e.__class__}")
                 exit()
 
     @classmethod

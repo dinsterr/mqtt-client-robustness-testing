@@ -1,6 +1,5 @@
 import shutil
 import threading
-import time
 from datetime import datetime
 
 import logger_factory
@@ -9,12 +8,11 @@ from monitor.process_monitor import ProcessMonitor
 from monitor.process_monitor import ProcessResult
 from monitor.tcp_proxy import TcpProxy
 
-main_logger = logger_factory.construct_logger("monitor")
-subprocess_logger = logger_factory.construct_logger("subprocess")
+logger = logger_factory.construct_logger("monitor")
 
 
 def _run_proxy(local_address, local_port, target_address, target_port):
-    main_logger.info(f"Starting proxy: {local_address}:{local_port} -> {target_address}:{target_port}")
+    logger.info(f"Starting proxy: {local_address}:{local_port} -> {target_address}:{target_port}")
     threading.Thread(target=TcpProxy, args=(local_address, local_port, target_address, target_port),
                      daemon=True).start()
 
@@ -23,23 +21,22 @@ def _run_monitored_subprocess():
     # Run the subprocess which should be monitored
     monitor = ProcessMonitor(Config.TEST_COMMAND)
     output: ProcessResult = monitor.run_to_completion()
-    main_logger.info("Finished monitoring")
+    logger.info("Finished monitoring")
 
     if not output:
         return
 
     _log_final_output(output)
-    if output.regex_match > 0:
-        main_logger.info(f"REGEX: {output.regex_match} matches")
 
 
 def _log_final_output(output):
     if output:
-        subprocess_logger.info(f"STDOUT: {output.stdout}")
-        subprocess_logger.info(f"STDERR: {output.stderr}")
-        subprocess_logger.info(f"RETURN: {output.return_code}")
+        logger.info(f"STDOUT: {output.stdout}")
+        logger.info(f"STDERR: {output.stderr}")
+        logger.info(f"RETURN: {output.return_code}")
+        logger.info(f"REGEX: {output.regex_match} matches")
 
-        if (output.return_code in Config.RETURN_CODES_VALUE_FILTER and not Config.ONLY_LOG_ON_REGEX_MATCH) or \
+        if (output.return_code in Config.RETURN_CODES_VALUE_FILTER) or \
                 (output.regex_match > 0):
             now = datetime.now()
             timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")

@@ -5,7 +5,7 @@ class Config:
     # Which level of log messages should be shown in the stdout of the monitor
     STDOUT_LOG_LEVEL = logging.DEBUG
     # Which level of log messages should be written to the archived log files
-    FILE_LOG_LEVEL = logging.INFO
+    FILE_LOG_LEVEL = logging.DEBUG
     BASE_LOGS_DIR = "./logs"
 
     # Setup for the test system
@@ -31,13 +31,13 @@ class Config:
 
     # The time in seconds that the monitor waits for new data on STDOUT/STDERR buffers before closing.
     # (-1 = infinite)
-    MONITOR_BUFFER_READ_TIMEOUT_SECS: int = 10
+    MONITOR_BUFFER_READ_TIMEOUT_SECS: int = 5
 
     # Matches the following regex pattern on the output STDOUT/STDERR buffers.
     REGEX_BUFFER_FILTER_PATTERN: str = "uid"
 
     # Exit on REGEX match
-    EXIT_ON_FIRST_REGEX_MATCH: bool = True
+    EXIT_ON_FIRST_REGEX_MATCH: bool = False
 
     # Add matching buffer output to log output only if it matches the pattern
     ONLY_LOG_ON_REGEX_MATCH: bool = False
