@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
     printf("Subscribing to topic '%s' for client '%s' using QoS %d\n\n"
            "Press Q<Enter> to quit\n\n", topic, CLIENTID, qos);
 
-    rc = MQTTClient_subscribe(client, TOPIC, QOS);
+    rc = MQTTClient_subscribe(client, topic, qos);
 
     int ch;
     do
