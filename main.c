@@ -27,7 +27,7 @@
 #include "MQTTClient.h"
 
 #define ADDRESS     "localhost"
-#define PORT        "8088"
+#define PORT        "1883"
 #define CLIENTID    "client"
 #define TOPIC       "foo"
 #define QOS         0
