@@ -15,7 +15,7 @@ def construct_logger(name: str):
     _setup_directories()
 
     logger = logging.getLogger(f"{name}")
-    logger.setLevel(Config.FILE_LOG_LEVEL)
+    logger.setLevel(logging.DEBUG)
 
     fh = logging.FileHandler(f'{LATEST_LOGS_DIR}/{name}.log')
     fh.setLevel(Config.FILE_LOG_LEVEL)
@@ -23,7 +23,7 @@ def construct_logger(name: str):
     logger.addHandler(fh)
 
     ch = logging.StreamHandler(stream=sys.stdout)
-    ch.setLevel(Config.FILE_LOG_LEVEL)
+    ch.setLevel(Config.STDOUT_LOG_LEVEL)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 

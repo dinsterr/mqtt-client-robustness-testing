@@ -2,7 +2,9 @@ import logging
 
 
 class Config:
-    STDOUT_LOG_LEVEL = logging.INFO
+    # Which level of log messages should be shown in the stdout of the monitor
+    STDOUT_LOG_LEVEL = logging.DEBUG
+    # Which level of log messages should be written to the archived log files
     FILE_LOG_LEVEL = logging.INFO
     BASE_LOGS_DIR = "./logs"
 

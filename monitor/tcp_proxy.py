@@ -1,4 +1,4 @@
-# Adapted from:
+# The core of the TCP receive / send loop is adapted from:
 # J. Seitz and T. Arnold,
 # “Chapter 2. The Network: Basics,” in Black Hat Python: Python programming for hackers and Pentesters,
 # San Francisco: No Starch Press, 2021.

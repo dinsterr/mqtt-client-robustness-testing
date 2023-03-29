@@ -9,9 +9,6 @@ from monitor.process_monitor import ProcessMonitor
 from monitor.process_monitor import ProcessResult
 from monitor.tcp_proxy import TcpProxy
 
-# TODO: correctly terminate all threads
-# TODO: Move logs if case is true to archive test run
-
 main_logger = logger_factory.construct_logger("monitor")
 subprocess_logger = logger_factory.construct_logger("subprocess")
 
@@ -26,7 +23,7 @@ def _run_monitored_subprocess():
     # Run the subprocess which should be monitored
     monitor = ProcessMonitor(Config.TEST_COMMAND)
     output: ProcessResult = monitor.run_to_completion()
-    main_logger.debug("Finished monitoring")
+    main_logger.info("Finished monitoring")
 
     if not output:
         return
@@ -41,11 +38,9 @@ def _log_final_output(output):
         subprocess_logger.info(f"STDOUT: {output.stdout}")
         subprocess_logger.info(f"STDERR: {output.stderr}")
         subprocess_logger.info(f"RETURN: {output.return_code}")
-        main_logger.info("Subprocess finished")
 
         if (output.return_code in Config.RETURN_CODES_VALUE_FILTER and not Config.ONLY_LOG_ON_REGEX_MATCH) or \
                 (output.regex_match > 0):
-            time.sleep(5)
             now = datetime.now()
             timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
             try:
