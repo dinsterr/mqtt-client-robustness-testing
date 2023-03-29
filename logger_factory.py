@@ -27,6 +27,7 @@ fh = logging.FileHandler(f'{LATEST_LOGS_DIR}/monitor.log')
 fh.setLevel(Config.FILE_LOG_LEVEL)
 fh.setFormatter(formatter)
 
+
 def construct_logger(name: str):
 
     logger = logging.getLogger(f"{name}")
