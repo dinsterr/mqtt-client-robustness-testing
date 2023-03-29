@@ -66,9 +66,8 @@ if __name__ == "__main__":
 
     # Creating a listener thread for each initialized listener
     for listener in LISTENERS:
-        thread = threading.Thread(target=listener.listen)
+        thread = threading.Thread(target=listener.listen, daemon=True)
         RUNNING_THREADS.append(thread)
-        thread.setDaemon(True)
         thread.start()
 
     # Handling server shutdown by CTRL+C

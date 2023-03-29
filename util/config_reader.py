@@ -74,10 +74,12 @@ class BrokerConfigReader(object):
             identifier = setting[0]
             try:
                 value = BrokerConfigReader.handle_config_value(identifier, setting[1].strip())
-                if identifier == "AUTO_PUBLISH":
-                    listenerconfig._is_auto_publish = value
+                if identifier == "PORT":
+                    listenerconfig.port = value
+                elif identifier == "AUTO_PUBLISH":
+                    listenerconfig.is_auto_publish = value
                 elif identifier == "AUTO_PUBLISH_INTERVAL":
-                    listenerconfig._auto_publish_interval = value
+                    listenerconfig.auto_publish_interval = value
                 elif identifier == "MESSAGE_GENERATOR_TYPE":
                     listenerconfig.message_generator_config.generator_type = value
                 elif identifier == "MESSAGE_GENERATOR_TOPIC":
@@ -137,7 +139,7 @@ class ListenerConfig(object):
     """
 
     def __init__(self):
-        self._port = 8088  # Port for the listener TODO: read from config
+        self._port = 1883
         self._is_auto_publish = False
         self._auto_publish_interval = 5
         self._message_generator_config: MessageGeneratorConfig = MessageGeneratorConfig()
