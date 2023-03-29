@@ -13,7 +13,16 @@ subprocess_logger = logger_factory.get_logger("subprocess")
 regex_buffer_filter = re.compile(Config.REGEX_BUFFER_FILTER_PATTERN)
 
 
-def _regex_matcher_on_buffer(data: bytes) -> bytes:
+class ProcessResult:
+    stdout = None
+    stderr = None
+    return_code = None
+    filter_results = None
+    regex_match = 0
+    reached_buffer_read_timeout = False
+
+
+def _regex_matcher_on_buffer(data: bytes, result: ProcessResult) -> bytes:
     if Config.REGEX_BUFFER_FILTER_PATTERN is None:
         if Config.ONLY_LOG_ON_REGEX_MATCH:
             return b""
@@ -22,20 +31,13 @@ def _regex_matcher_on_buffer(data: bytes) -> bytes:
 
     decoded_data = data.decode("utf-8", errors='ignore')
     if decoded_data and regex_buffer_filter.search(decoded_data):
-        # TODO
+        result.regex_match += 1
         if Config.ONLY_LOG_ON_REGEX_MATCH:
             return data
         else:
             return b""
 
     return b""
-
-
-class ProcessResult:
-    stdout = None
-    stderr = None
-    return_code = None
-    filter_results = None
 
 
 class ProcessMonitor:
@@ -70,7 +72,8 @@ class ProcessMonitor:
 
         # End the loop if we have slept 'no_data_counter' times for a time of 'monitor_frequency_secs'
         no_data_counter = 0
-        while no_data_counter < (monitor_timeout_secs * monitor_frequency_secs):
+        max_iterations_without_new_data = monitor_timeout_secs / monitor_frequency_secs
+        while no_data_counter < max_iterations_without_new_data:
             has_data = False
             try:
                 for key, _ in sel.select(timeout=monitor_frequency_secs):
@@ -80,6 +83,7 @@ class ProcessMonitor:
 
                     # Pass data to the relevant handler and add the result to the respective buffer
                     has_data = True
+                    subprocess_logger.log(data)
                     if key.fileobj is process_handle.stdout:
                         stdout_buffer += data if stdout_handler is None else stdout_handler(data)
                     else:
@@ -92,12 +96,14 @@ class ProcessMonitor:
                 no_data_counter = 0
             else:
                 no_data_counter += 1
-                # subprocess_logger.debug("No new output buffer data")
 
                 # We also stop if the process has stopped
                 if process_handle.poll():
                     subprocess_logger.debug(f"Subprocess exited with code: {process_handle.returncode}")
                     break
+
+        if no_data_counter >= max_iterations_without_new_data:
+            result.reached_buffer_read_timeout = True
 
         process_handle.poll()
         result.stdout = stdout_buffer

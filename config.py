@@ -9,17 +9,20 @@ class Config:
     # Setup for the test system
     #############################################
 
-    # Command to instantiate the test system. This can be an arbitrary complex shell command.
-    # STDOUT and STDERR buffers are monitored for output.
-    TEST_COMMAND: str = f"/home/dfs/CLionProjects/fuzzing_targets/cmake-build-debug/fuzzing_targets"
-
     # The local address of the TCP proxy to which the test system connects
     LOCAL_ADDRESS: str = "localhost"
-    LOCAL_PORT: int = 1883
+    LOCAL_PORT: int = 8080
 
     # The address of the remote system / target MQTT broker
     TARGET_ADDRESS: str = "localhost"
-    TARGET_PORT: int = 8088
+    TARGET_PORT: int = 1883
+
+    TOPIC: str = "foo"
+
+    # Command to instantiate the test system. This can be an arbitrary complex shell command.
+    # STDOUT and STDERR buffers are monitored for output.
+    TEST_COMMAND: str = f"/home/dfs/CLionProjects/fuzzing_targets/cmake-build-debug/" \
+                        f"fuzzing_targets -a {LOCAL_ADDRESS} -p {LOCAL_PORT} -t {TOPIC} -q 0"
 
     # Monitoring conditions
     #############################################
@@ -28,17 +31,17 @@ class Config:
     MONITOR_BUFFER_READ_TIMEOUT_SECS: int = 10
 
     # Matches the following regex pattern on the output STDOUT/STDERR buffers.
-    REGEX_BUFFER_FILTER_PATTERN: str = "uid"
+    REGEX_BUFFER_FILTER_PATTERN: str = ""
 
     # Exit on REGEX match
     EXIT_ON_REGEX_MATCH: bool = False
 
     # Add matching buffer output to log output only if it matches the pattern
-    ONLY_LOG_ON_REGEX_MATCH: bool = True
+    ONLY_LOG_ON_REGEX_MATCH: bool = False
 
     # Treats the selected return codes as unexpected exit.
-    # Archives all logs in a new directory if the code is returned.
-    RETURN_CODES_VALUE_FILTER: list[int] = [1]
+    # Archives all logs in a new directory only if the code is returned.
+    RETURN_CODES_VALUE_FILTER: list[int] = []
 
     # The time in seconds that the monitor waits for new TCP data from the system under test before closing.
     MAX_LOCAL_TCP_TIMEOUT_SECS = 5
