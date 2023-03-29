@@ -43,7 +43,8 @@ def _log_final_output(output):
         subprocess_logger.info(f"RETURN: {output.return_code}")
         main_logger.info("Subprocess finished")
 
-        if output.return_code in Config.RETURN_CODES_VALUE_FILTER:
+        if (output.return_code in Config.RETURN_CODES_VALUE_FILTER and not Config.ONLY_LOG_ON_REGEX_MATCH) or \
+                (output.regex_match > 0):
             time.sleep(5)
             now = datetime.now()
             timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")

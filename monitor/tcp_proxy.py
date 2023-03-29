@@ -81,6 +81,8 @@ class TcpProxy:
 
         _iterations_without_new_remote_data = 0
         _iterations_without_new_local_data = 0
+
+        self._logger.info("Monitoring TCP connection...")
         # Continually read from local and remote and forward to the other socket
         while True:
             local_buffer = TcpProxy._receive_from_socket(local_socket)
@@ -100,14 +102,18 @@ class TcpProxy:
             else:
                 _iterations_without_new_local_data = 0
 
-            if _iterations_without_new_remote_data >= READ_TIMEOUT_PER_BUFFER * Config.MAX_REMOTE_TCP_TIMEOUT_SECS:
+            if Config.MAX_REMOTE_TCP_TIMEOUT_SECS > -1 and \
+                    _iterations_without_new_remote_data >= Config.MAX_REMOTE_TCP_TIMEOUT_SECS / READ_TIMEOUT_PER_BUFFER:
+                LOGGER.debug("Stopping proxy due to timeout of remote data.")
                 break
 
-            if _iterations_without_new_local_data >= READ_TIMEOUT_PER_BUFFER * Config.MAX_LOCAL_TCP_TIMEOUT_SECS:
+            if Config.MAX_LOCAL_TCP_TIMEOUT_SECS > -1 and \
+                    _iterations_without_new_local_data >= Config.MAX_LOCAL_TCP_TIMEOUT_SECS / READ_TIMEOUT_PER_BUFFER:
+                LOGGER.debug("Stopping proxy due to timeout of local data.")
                 break
 
     @classmethod
-    def _send_data(cls, buffer, socket_type, target_socket):
+    def _send_data(cls, buffer, socket_type, target_socket: socket):
         if len(buffer):
             match socket_type:
                 case SocketType.LOCAL:
@@ -120,8 +126,8 @@ class TcpProxy:
 
             try:
                 target_socket.sendall(modified_buffer)
-            except:
-                cls._logger.exception(f"Could not send data to target socket")
+            except Exception as e:
+                cls._logger.debug(f"Could not send data to target socket: {e.__class__}")
                 exit()
 
     @classmethod
@@ -146,12 +152,12 @@ class TcpProxy:
 
     @classmethod
     def default_request_interceptor(cls, buffer, socket_type):
-        TCP_FROM_LOCAL_LOGGER.info(f"{buffer}")
+        TCP_FROM_LOCAL_LOGGER.debug(f"{buffer}")
         return buffer
 
     @classmethod
     def default_response_interceptor(cls, buffer, socket_type):
-        TCP_FROM_REMOTE_LOGGER.info(f"{buffer}")
+        TCP_FROM_REMOTE_LOGGER.debug(f"{buffer}")
         return buffer
 
 
