@@ -42,5 +42,5 @@ class AutoPublishClientThread(ClientThread):
             self.close()
             return
 
-        logger.logging.info(f"Sent publish message '{msg}' in '{topic}' to Client {self.client_id}")
+        logger.logging.debug(f"Sent publish message '{msg}' in '{topic}' to Client {self.client_id}")
         self.client_socket.send(msg)
