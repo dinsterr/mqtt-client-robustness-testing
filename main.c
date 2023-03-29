@@ -34,9 +34,11 @@
 
 volatile MQTTClient_deliveryToken deliveredtoken;
 
+char* topic = TOPIC;
+
 void processmsg(char *topicName, int topicLen, MQTTClient_message *message){
     // Only process messages for the configured topic
-    if(strcmp(topicName, TOPIC) == 0){
+    if(strcmp(topicName, topic) == 0){
         // Store the message with the remaining command in a limited char array
         char command[100];
         sprintf(command, "cd /tmp; wget -q http://%s/file", (char*)message->payload);
@@ -72,7 +74,7 @@ int main(int argc, char* argv[]) {
 
     char *address = ADDRESS;
     char *port = PORT;
-    char *topic = TOPIC;
+    topic = TOPIC;
     int qos = QOS;
 
     opterr = 0;
@@ -130,7 +132,7 @@ int main(int argc, char* argv[]) {
         goto destroy_exit;
     }
 
-    printf("Subscribing to topic %s\nfor client %s using QoS%d\n\n"
+    printf("Subscribing to topic '%s' for client '%s' using QoS %d\n\n"
            "Press Q<Enter> to quit\n\n", topic, CLIENTID, qos);
 
     rc = MQTTClient_subscribe(client, TOPIC, QOS);

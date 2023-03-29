@@ -6,5 +6,5 @@ nux/x64/ninja -G Ninja -S /home/dfs/CLionProjects/fuzzing_targets -B /home/dfs/C
 
 Executed with
 ```
-./fuzzing_targets -a 127.0.0.1 -p 8080 -t foo -q 1
+./fuzzing_targets -a 127.0.0.1 -p 8080 -t foo -q 0
 ```
