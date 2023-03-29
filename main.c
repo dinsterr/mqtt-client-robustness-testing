@@ -143,11 +143,13 @@ int main(int argc, char* argv[]) {
         ch = getchar();
     } while (ch!='Q' && ch != 'q');
 
+    /*
     if ((rc = MQTTClient_unsubscribe(client, topic)) != MQTTCLIENT_SUCCESS)
     {
         printf("Failed to unsubscribe, return code %d\n", rc);
         rc = EXIT_FAILURE;
     }
+     */
 
 destroy_exit:
     MQTTClient_destroy(&client);
