@@ -1,7 +1,8 @@
 import logging
+import sys
 import warnings
 
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG, stream=sys.stdout)
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 DEBUG = 0

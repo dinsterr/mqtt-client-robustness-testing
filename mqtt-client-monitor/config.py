@@ -23,8 +23,8 @@ class Config:
 
     # Command to instantiate the test system. This can be an arbitrary complex shell command.
     # STDOUT and STDERR buffers are monitored for output.
-    TEST_COMMAND: str = f"/home/dfs/CLionProjects/fuzzing_targets/cmake-build-debug/" \
-                        f"fuzzing_targets -a {LOCAL_ADDRESS} -p {LOCAL_PORT} -t {TOPIC} -q 0"
+    TEST_COMMAND: str = f"../fuzzing-target/cmake-build-debug/" \
+                        f"fuzzing-target -a {LOCAL_ADDRESS} -p {LOCAL_PORT} -t {TOPIC} -q 0"
 
     # Monitoring conditions
     #############################################
