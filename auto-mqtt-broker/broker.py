@@ -9,14 +9,14 @@ from broker.subscription_manager import SubscriptionManager
 from util import logger
 from util.config_reader import BrokerConfigReader as ConfigReader
 
-if __name__ == "__main__":
+
+def main():
     # Listeners
     LISTENERS = []
     RUNNING_THREADS = []
     HOSTNAME = "0.0.0.0"
     # default configs
     CONFIG_PATH = os.path.dirname(os.path.realpath(__file__)) + "/broker.config"
-
     # argument parser
     parser = argparse.ArgumentParser("broker.py", description="MQTT Broker supporting Multilateral Security",
                                      epilog="Developed by Babbadeckl. Questions and Bug-reports can be mailed to "
@@ -27,25 +27,19 @@ if __name__ == "__main__":
     # argument for hostname
     parser.add_argument('-H', '--hostname', dest="hostname", help="hostname of the broker", metavar="HOSTNAME",
                         type=str, default=HOSTNAME)
-
     # argument for debug mode
     parser.add_argument('-d', '--debug', dest="debug", help="turn on the debug mode for the broker",
                         action='store_true', default=0)
     args = parser.parse_args()
-
     # assign argument values
     listener_configs = ConfigReader.read_config(args.config)
     logger.DEBUG = args.debug
-
     # assign argument hostname
     HOSTNAME = args.hostname
-
     # create SubscriptionManager
     subscription_manager = SubscriptionManager()
-
     # create StatusManager
     client_manager = ClientManager()
-
     # create listeners
     try:
         for listener_config in listener_configs:
@@ -58,18 +52,15 @@ if __name__ == "__main__":
     except ValueError:
         logger.logging.error(f"Listener config object is invalid. Something went terribly wrong.")
         exit(0)
-
     # Debug messages
     if logger.DEBUG:
         logger.print_listener_configs(listener_configs)
         logger.print_listeners(LISTENERS)
-
     # Creating a listener thread for each initialized listener
     for listener in LISTENERS:
         thread = threading.Thread(target=listener.listen, daemon=True)
         RUNNING_THREADS.append(thread)
         thread.start()
-
     # Handling server shutdown by CTRL+C
     try:
         while True:
@@ -86,3 +77,7 @@ if __name__ == "__main__":
             logger.logging.info(f"Closing Sockets ...")
             LISTENERS[index].close_sockets()
         logger.logging.info("Broker shutdown complete.")
+
+
+if __name__ == "__main__":
+    main()
