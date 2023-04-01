@@ -53,3 +53,5 @@ class Config:
     # The time in seconds that the monitor waits for new TCP data from the broker before closing.
     # (-1 = no limit)
     MAX_REMOTE_TCP_TIMEOUT_SECS = 5
+
+    AUTO_RESTART = False

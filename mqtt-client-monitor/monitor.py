@@ -18,32 +18,35 @@ def _run_proxy(local_address, local_port, target_address, target_port):
 
 
 def _run_monitored_subprocess():
-    # Run the subprocess which should be monitored
-    monitor = ProcessMonitor(Config.TEST_COMMAND)
-    output: ProcessResult = monitor.run_to_completion()
-    logger.info("Finished monitoring")
+    while True:
+        # Run the subprocess which should be monitored
+        monitor = ProcessMonitor(Config.TEST_COMMAND)
+        result: ProcessResult = monitor.run_to_completion()
+        logger.info("Finished monitoring")
 
-    if not output:
+        _log_final_output(result)
+
+        if not Config.AUTO_RESTART:
+            break
+
+
+def _log_final_output(result):
+    if not result:
         return
 
-    _log_final_output(output)
+    logger.info(f"STDOUT: {result.stdout}")
+    logger.info(f"STDERR: {result.stderr}")
+    logger.info(f"RETURN: {result.return_code}")
+    logger.info(result.buffer_handler_result)
 
-
-def _log_final_output(output):
-    if output:
-        logger.info(f"STDOUT: {output.stdout}")
-        logger.info(f"STDERR: {output.stderr}")
-        logger.info(f"RETURN: {output.return_code}")
-        logger.info(f"REGEX: {output.regex_match} matches")
-
-        if (output.return_code in Config.RETURN_CODES_VALUE_FILTER) or \
-                (output.regex_match > 0):
-            now = datetime.now()
-            timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
-            try:
-                shutil.move(f"{Config.BASE_LOGS_DIR}/latest", f"{Config.BASE_LOGS_DIR}/{timestamp}")
-            except:
-                pass
+    if (result.return_code in Config.RETURN_CODES_VALUE_FILTER) \
+            or result.buffer_handler_exit:
+        now = datetime.now()
+        timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
+        try:
+            shutil.move(f"{Config.BASE_LOGS_DIR}/latest", f"{Config.BASE_LOGS_DIR}/{timestamp}")
+        except:
+            pass
 
 
 if __name__ == "__main__":

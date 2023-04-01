@@ -3,5 +3,5 @@ import setuptools
 setuptools.setup(
     name="mqtt-client-monitor",
     version="1.0",
-    packages=[]
+    packages=setuptools.find_packages()
 )
