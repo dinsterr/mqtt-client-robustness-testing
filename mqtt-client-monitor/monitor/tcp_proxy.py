@@ -86,10 +86,10 @@ class TcpProxy:
         self._local_socket, addr = self._internal_server_socket.accept()
         LOGGER.info(f"Received connection from {addr[0]}:{addr[1]}")
 
-        # Define the remote socket used for forwarding requests
-        self._remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
         if not self._remote_socket:
+            # Define the remote socket used for forwarding requests
+            self._remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
             # Establish a connection to the remote host
             try:
                 self._remote_socket.connect((self._remote_host, self._remote_port))
