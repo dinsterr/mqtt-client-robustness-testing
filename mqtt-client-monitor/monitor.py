@@ -1,5 +1,5 @@
 import shutil
-import threading
+import time
 from datetime import datetime
 
 import logger_factory
@@ -13,21 +13,19 @@ logger = logger_factory.construct_logger("monitor")
 
 def _run_proxy(local_address, local_port, target_address, target_port):
     logger.info(f"Starting proxy: {local_address}:{local_port} -> {target_address}:{target_port}")
-    threading.Thread(target=TcpProxy, args=(local_address, local_port, target_address, target_port),
-                     daemon=True).start()
+    proxy = TcpProxy(local_address, local_port, target_address, target_port)
+    proxy.start()
+    return proxy
 
 
 def _run_monitored_subprocess():
-    while True:
-        # Run the subprocess which should be monitored
-        monitor = ProcessMonitor(Config.TEST_COMMAND)
-        result: ProcessResult = monitor.run_to_completion()
-        logger.info("Finished monitoring")
+    # Run the subprocess which should be monitored
+    monitor = ProcessMonitor(Config.TEST_COMMAND)
+    result: ProcessResult = monitor.run_to_completion()
+    logger.info("Finished monitoring")
 
-        _log_final_output(result)
-
-        if not Config.AUTO_RESTART:
-            break
+    _log_final_output(result)
+    return result
 
 
 def _log_final_output(result):
@@ -49,6 +47,21 @@ def _log_final_output(result):
             pass
 
 
+def main():
+    proxy_thread = _run_proxy(Config.LOCAL_ADDRESS, Config.LOCAL_PORT, Config.TARGET_ADDRESS, Config.TARGET_PORT)
+
+    while True:
+        result = _run_monitored_subprocess()
+
+        if not Config.AUTO_RESTART:
+            break
+
+        time.sleep(1)
+        proxy_thread.reset()
+
+    proxy_thread.stop()
+    proxy_thread.join()
+
+
 if __name__ == "__main__":
-    _run_proxy(Config.LOCAL_ADDRESS, Config.LOCAL_PORT, Config.TARGET_ADDRESS, Config.TARGET_PORT)
-    _run_monitored_subprocess()
+    main()
