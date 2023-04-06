@@ -142,12 +142,14 @@ class ProcessMonitor:
 
             # End loop if the buffer handler exit condition is reached
             if buffer_handler.exit:
+                main_logger.debug(f"Process buffer handler reached exit condition")
                 self._result.buffer_handler_exit = True
                 break
 
             # End loop if the buffer status has not recorded any new data within the given timeout
             if buffer_status.isStop:
-                self._result.buffer_handler_exit = True
+                main_logger.debug(f"Process buffer handler reached exit condition")
+                self._result.reached_buffer_result_timeout = True
                 break
 
         process_handle.kill()

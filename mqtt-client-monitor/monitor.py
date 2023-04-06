@@ -11,25 +11,6 @@ from monitor.tcp_proxy import TcpProxy
 logger = logger_factory.construct_logger("monitor")
 
 
-def _run_proxy(local_address, local_port, target_address, target_port):
-    logger.info(f"Starting proxy: {local_address}:{local_port} -> {target_address}:{target_port}")
-    threading.Thread(target=TcpProxy, args=(local_address, local_port, target_address, target_port),
-                     daemon=True).start()
-
-
-def _run_monitored_subprocess():
-    while True:
-        # Run the subprocess which should be monitored
-        monitor = ProcessMonitor(Config.TEST_COMMAND)
-        result: ProcessResult = monitor.run_to_completion()
-        logger.info("Finished monitoring")
-
-        _log_final_output(result)
-
-        if not Config.AUTO_RESTART:
-            break
-
-
 def _log_final_output(result):
     if not result:
         return
@@ -49,6 +30,18 @@ def _log_final_output(result):
             pass
 
 
+def main():
+    logger.info(f"Starting proxy: {Config.LOCAL_ADDRESS}:{Config.LOCAL_PORT} -> {Config.TARGET_ADDRESS}:{Config.TARGET_PORT}")
+    threading.Thread(target=TcpProxy, args=(Config.LOCAL_ADDRESS, Config.LOCAL_PORT, Config.TARGET_ADDRESS, Config.TARGET_PORT),
+                     daemon=True).start()
+
+    # Run the subprocess which should be monitored
+    monitor = ProcessMonitor(Config.TEST_COMMAND)
+    result: ProcessResult = monitor.run_to_completion()
+    logger.info("Finished monitoring")
+
+    _log_final_output(result)
+
+
 if __name__ == "__main__":
-    _run_proxy(Config.LOCAL_ADDRESS, Config.LOCAL_PORT, Config.TARGET_ADDRESS, Config.TARGET_PORT)
-    _run_monitored_subprocess()
+    main()
