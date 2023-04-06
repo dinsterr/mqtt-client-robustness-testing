@@ -38,30 +38,6 @@ class BufferHandler:
         return self._exit
 
 
-class BufferStatus:
-    isStop = False
-    _no_new_data_counter = 0
-
-    def __init__(self, monitor_timeout_secs, monitor_frequency_secs):
-        # We want to stop if we have slept 'no_data_counter' times for a time of 'monitor_frequency_secs'
-        # Which approximately equals the configured 'monitor_timeout_secs'
-        if monitor_timeout_secs > -1:
-            self._max_iterations_without_new_data = monitor_timeout_secs / monitor_frequency_secs
-        else:
-            self._max_iterations_without_new_data = 1
-
-    def record(self, stderr_buffer, stdout_buffer):
-        if stderr_buffer is not None and stdout_buffer is not None:
-            self._no_new_data_counter = 0
-            return
-
-        self._no_new_data_counter += 1
-
-        # Set stop if max iterations without new data is reached
-        if self._no_new_data_counter >= self._max_iterations_without_new_data:
-            self.isStop = True
-
-
 class RegexBufferHandler(BufferHandler):
     """
     Matches the buffer data against a regex pattern from the Config and counts the amount of matches.
@@ -95,6 +71,30 @@ class RegexBufferHandler(BufferHandler):
                 self._exit = True
 
         return data
+
+
+class BufferStatus:
+    isStop = False
+    _no_new_data_counter = 0
+
+    def __init__(self, monitor_timeout_secs, monitor_frequency_secs):
+        # We want to stop if we have slept 'no_data_counter' times for a time of 'monitor_frequency_secs'
+        # Which approximately equals the configured 'monitor_timeout_secs'
+        if monitor_timeout_secs > -1:
+            self._max_iterations_without_new_data = monitor_timeout_secs / monitor_frequency_secs
+        else:
+            self._max_iterations_without_new_data = 1
+
+    def record(self, stderr_buffer, stdout_buffer):
+        if stderr_buffer is not None and stdout_buffer is not None:
+            self._no_new_data_counter = 0
+            return
+
+        self._no_new_data_counter += 1
+
+        # Set stop if max iterations without new data is reached
+        if self._no_new_data_counter >= self._max_iterations_without_new_data:
+            self.isStop = True
 
 
 class ProcessMonitor:
