@@ -16,6 +16,33 @@ TCP_FROM_LOCAL_LOGGER = logger_factory.construct_logger("TCP_FROM_LOCAL")
 TCP_FROM_REMOTE_LOGGER = logger_factory.construct_logger("TCP_FROM_REMOTE")
 
 
+class TcpBufferStatus:
+    _iterations_without_new_remote_data = 0
+    _iterations_without_new_local_data = 0
+    isStop = False
+
+    def record(self, local_buffer, remote_buffer):
+        if len(remote_buffer) == 0:
+            self._iterations_without_new_remote_data += 1
+        else:
+            _iterations_without_new_remote_data = 0
+
+        if len(local_buffer) == 0:
+            self._iterations_without_new_local_data += 1
+        else:
+            _iterations_without_new_local_data = 0
+
+        if Config.MAX_REMOTE_TCP_TIMEOUT_SECS > -1 and \
+                self._iterations_without_new_remote_data >= Config.MAX_REMOTE_TCP_TIMEOUT_SECS / READ_TIMEOUT_PER_BUFFER:
+            LOGGER.debug("Stopping proxy due to timeout of remote data.")
+            self.isStop = True
+
+        if Config.MAX_LOCAL_TCP_TIMEOUT_SECS > -1 and \
+                self._iterations_without_new_local_data >= Config.MAX_LOCAL_TCP_TIMEOUT_SECS / READ_TIMEOUT_PER_BUFFER:
+            LOGGER.debug("Stopping proxy due to timeout of local data.")
+            self.isStop = True
+
+
 class TcpProxy:
     _local_host: str
     _local_port: int
@@ -53,33 +80,32 @@ class TcpProxy:
         self._server_loop(self._local_host, self._local_port)
 
     def _server_loop(self, local_host: str, local_port: int):
+        # Set up the internal socket to which the system under test connects
         self._internal_server_socket = socket.create_server((local_host, local_port))
-
         LOGGER.info(f"Waiting for connection on {local_host}:{local_port}")
         self._local_socket, addr = self._internal_server_socket.accept()
+        LOGGER.info(f"Received connection from {addr[0]}:{addr[1]}")
 
-        LOGGER.info(f"Receiving connection from {addr[0]}:{addr[1]}")
-        self._proxy_handler(self._local_socket)
-
-    def _proxy_handler(self, local_socket):
         # Define the remote socket used for forwarding requests
         self._remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        # Establish a connection to the remote host
-        try:
-            self._remote_socket.connect((self._remote_host, self._remote_port))
-        except:
-            LOGGER.exception(f"Could not create connection to remote at {self._remote_host}:{self._remote_port}")
-            return
+        if not self._remote_socket:
+            # Establish a connection to the remote host
+            try:
+                self._remote_socket.connect((self._remote_host, self._remote_port))
+            except:
+                LOGGER.exception(f"Could not create connection to remote at {self._remote_host}:{self._remote_port}")
+                return
 
-        LOGGER.info(f"Established connection to remote at {self._remote_host}:{self._remote_port}")
-
-        _iterations_without_new_remote_data = 0
-        _iterations_without_new_local_data = 0
+            LOGGER.info(f"Established connection to remote at {self._remote_host}:{self._remote_port}")
 
         LOGGER.info("Monitoring TCP connection...")
+        self._proxy_handler(self._local_socket)
+
+    def _proxy_handler(self, local_socket):
+        status = TcpBufferStatus()
         # Continually read from local and remote and forward to the other socket
-        while True:
+        while not status.isStop:
             local_buffer = TcpProxy._receive_from_socket(local_socket)
             TcpProxy._send_data(local_buffer, SocketType.LOCAL, self._remote_socket)
 
@@ -87,25 +113,8 @@ class TcpProxy:
             remote_buffer = TcpProxy._receive_from_socket(self._remote_socket)
             TcpProxy._send_data(remote_buffer, SocketType.REMOTE, local_socket)
 
-            if len(remote_buffer) == 0:
-                _iterations_without_new_remote_data += 1
-            else:
-                _iterations_without_new_remote_data = 0
+            status.record(local_buffer, remote_buffer)
 
-            if len(local_buffer) == 0:
-                _iterations_without_new_local_data += 1
-            else:
-                _iterations_without_new_local_data = 0
-
-            if Config.MAX_REMOTE_TCP_TIMEOUT_SECS > -1 and \
-                    _iterations_without_new_remote_data >= Config.MAX_REMOTE_TCP_TIMEOUT_SECS / READ_TIMEOUT_PER_BUFFER:
-                LOGGER.debug("Stopping proxy due to timeout of remote data.")
-                break
-
-            if Config.MAX_LOCAL_TCP_TIMEOUT_SECS > -1 and \
-                    _iterations_without_new_local_data >= Config.MAX_LOCAL_TCP_TIMEOUT_SECS / READ_TIMEOUT_PER_BUFFER:
-                LOGGER.debug("Stopping proxy due to timeout of local data.")
-                break
 
     @classmethod
     def _send_data(cls, buffer, socket_type, target_socket: socket):
