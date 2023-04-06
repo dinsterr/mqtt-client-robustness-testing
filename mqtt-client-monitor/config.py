@@ -30,11 +30,10 @@ class Config:
     #############################################
 
     # The time in seconds that the monitor waits for new data on STDOUT/STDERR buffers before closing.
-    # (-1 = infinite)
-    MONITOR_BUFFER_READ_TIMEOUT_SECS: int = 5
+    MONITOR_BUFFER_READ_TIMEOUT_SECS: int = 100
 
     # Matches the following regex pattern on the output STDOUT/STDERR buffers.
-    REGEX_BUFFER_FILTER_PATTERN: str = "uid"
+    REGEX_BUFFER_FILTER_PATTERN: str = ""
 
     # Exit on REGEX match
     EXIT_ON_FIRST_REGEX_MATCH: bool = False
@@ -52,6 +51,6 @@ class Config:
 
     # The time in seconds that the monitor waits for new TCP data from the broker before closing.
     # (-1 = no limit)
-    MAX_REMOTE_TCP_TIMEOUT_SECS = 5
+    MAX_REMOTE_TCP_TIMEOUT_SECS = -1
 
     AUTO_RESTART = False

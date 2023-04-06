@@ -2,18 +2,15 @@
 # J. Seitz and T. Arnold,
 # “Chapter 2. The Network: Basics,” in Black Hat Python: Python programming for hackers and Pentesters,
 # San Francisco: No Starch Press, 2021.
-
+import logging
 import socket
+import threading
 from enum import Enum
 
 import logger_factory
 from config import Config
 
 READ_TIMEOUT_PER_BUFFER = 0.1
-
-LOGGER = logger_factory.get_logger("monitor")
-TCP_FROM_LOCAL_LOGGER = logger_factory.construct_logger("TCP_FROM_LOCAL")
-TCP_FROM_REMOTE_LOGGER = logger_factory.construct_logger("TCP_FROM_REMOTE")
 
 
 class TcpBufferStatus:
@@ -34,37 +31,44 @@ class TcpBufferStatus:
 
         if Config.MAX_REMOTE_TCP_TIMEOUT_SECS > -1 and \
                 self._iterations_without_new_remote_data >= Config.MAX_REMOTE_TCP_TIMEOUT_SECS / READ_TIMEOUT_PER_BUFFER:
-            LOGGER.debug("Stopping proxy due to timeout of remote data.")
             self.isStop = True
 
         if Config.MAX_LOCAL_TCP_TIMEOUT_SECS > -1 and \
                 self._iterations_without_new_local_data >= Config.MAX_LOCAL_TCP_TIMEOUT_SECS / READ_TIMEOUT_PER_BUFFER:
-            LOGGER.debug("Stopping proxy due to timeout of local data.")
             self.isStop = True
 
 
-class TcpProxy:
-    _local_host: str
-    _local_port: int
-    _remote_host: str
-    _remote_port: int
-
+class TcpProxy(threading.Thread):
     _internal_server_socket = None
     _local_socket = None
     _remote_socket = None
+
+    LOGGER = logging.getLogger("monitor")
+    TCP_FROM_LOCAL_LOGGER = logging.getLogger("monitor")
+    TCP_FROM_REMOTE_LOGGER = logging.getLogger("monitor")
 
     def __init__(self, local_host: str,
                  local_port: int,
                  remote_host: str,
                  remote_port: int):
+        super(TcpProxy, self).__init__(daemon=True)
+        self._isStop = False
+
+        self._reset_event = threading.Event()
         self._local_host = local_host
         self._local_port = local_port
         self._remote_host = remote_host
         self._remote_port = remote_port
-        self.start()
 
     def __del__(self):
-        LOGGER.debug(f"Closing all sockets")
+        self.stop()
+
+    def run(self):
+        self._server_loop(self._local_host, self._local_port)
+
+    def stop(self):
+        self._isStop = True
+        self.LOGGER.debug(f"Closing all sockets")
 
         # Close potentially remaining sockets
         if self._remote_socket is not None:
@@ -76,72 +80,62 @@ class TcpProxy:
         if self._internal_server_socket is not None:
             self._internal_server_socket.close()
 
-    def start(self):
-        self._server_loop(self._local_host, self._local_port)
+    def reset(self):
+        self._reset_event.set()
 
     def _server_loop(self, local_host: str, local_port: int):
-        # Set up the internal socket to which the system under test connects
-        self._internal_server_socket = socket.create_server((local_host, local_port))
-        LOGGER.info(f"Waiting for connection on {local_host}:{local_port}")
-        self._local_socket, addr = self._internal_server_socket.accept()
-        LOGGER.info(f"Received connection from {addr[0]}:{addr[1]}")
+        while not self._isStop:
+            # Set up the internal socket to which the system under test connects
+            if self._internal_server_socket:
+                self._internal_server_socket.close()
+                self._reset_event.clear()
 
-        # Define the remote socket used for forwarding requests
-        self._remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._internal_server_socket = socket.create_server((local_host, local_port))
+            self.LOGGER.info(f"Waiting for connection on {local_host}:{local_port}")
+            self._local_socket, addr = self._internal_server_socket.accept()
+            self.LOGGER.info(f"Received connection from {addr[0]}:{addr[1]}")
 
-        if not self._remote_socket:
-            # Establish a connection to the remote host
-            try:
-                self._remote_socket.connect((self._remote_host, self._remote_port))
-            except:
-                LOGGER.exception(f"Could not create connection to remote at {self._remote_host}:{self._remote_port}")
-                return
+            # If there is already an existing remote socket we keep the connection open
+            if not self._remote_socket:
+                # Define the remote socket used for forwarding requests
+                self._remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-            LOGGER.info(f"Established connection to remote at {self._remote_host}:{self._remote_port}")
+                # Establish a connection to the remote host
+                try:
+                    self._remote_socket.connect((self._remote_host, self._remote_port))
+                except:
+                    self.LOGGER.exception(f"Could not create connection to remote at {self._remote_host}:{self._remote_port}")
+                    return
 
-        LOGGER.info("Monitoring TCP connection...")
-        self._proxy_handler(self._local_socket)
+                self.LOGGER.info(f"Established connection to remote at {self._remote_host}:{self._remote_port}")
+
+            self.LOGGER.info("Monitoring TCP connection...")
+            self._proxy_handler(self._local_socket)
 
     def _proxy_handler(self, local_socket):
-        status = TcpBufferStatus()
+        buffer_status = TcpBufferStatus()
         # Continually read from local and remote and forward to the other socket
-        while not status.isStop:
-            local_buffer = TcpProxy._receive_from_socket(local_socket)
-            TcpProxy._send_data(local_buffer, SocketType.LOCAL, self._remote_socket)
+        while not buffer_status.isStop and not self._reset_event.is_set():
+            local_buffer = self._receive_from_socket(local_socket)
+            self._send_data(local_buffer, SocketType.LOCAL, self._remote_socket)
 
             # Receive the response and send it to the client
-            remote_buffer = TcpProxy._receive_from_socket(self._remote_socket)
-            TcpProxy._send_data(remote_buffer, SocketType.REMOTE, local_socket)
+            remote_buffer = self._receive_from_socket(self._remote_socket)
+            self._send_data(remote_buffer, SocketType.REMOTE, local_socket)
 
-            status.record(local_buffer, remote_buffer)
+            buffer_status.record(local_buffer, remote_buffer)
 
+        if buffer_status.isStop:
+            self.LOGGER.debug("Stopping proxy due to timeout of TCP data.")
 
-    @classmethod
-    def _send_data(cls, buffer, socket_type, target_socket: socket):
-        if len(buffer):
-            match socket_type:
-                case SocketType.LOCAL:
-                    modified_buffer = TcpProxy.default_request_interceptor(buffer, socket_type)
-                case SocketType.REMOTE:
-                    modified_buffer = TcpProxy.default_response_interceptor(buffer, socket_type)
-                case _:
-                    # Should never be reached
-                    raise ValueError(f"Invalid socket type {type}")
-
-            try:
-                target_socket.sendall(modified_buffer)
-            except Exception as e:
-                LOGGER.debug(f"Could not send data to target socket: {e.__class__}")
-                exit()
-
-    @classmethod
-    def _receive_from_socket(cls, connection):
+    def _receive_from_socket(self, connection):
         buffer = b""
 
-        # Wait for a maximum of X seconds to receive new data on the buffer
-        connection.settimeout(READ_TIMEOUT_PER_BUFFER)
         try:
-            while True:
+            # Wait for a maximum of X seconds to receive new data on the buffer
+            connection.settimeout(READ_TIMEOUT_PER_BUFFER)
+
+            while not self._reset_event.is_set:
                 # Blocking read data in blocks of X bytes
                 data = connection.recv(4096)
 
@@ -151,17 +145,31 @@ class TcpProxy:
                 buffer += data
         except socket.timeout:
             pass
+        except OSError:
+            pass
 
         return buffer
 
-    @classmethod
-    def default_request_interceptor(cls, buffer, socket_type):
-        TCP_FROM_LOCAL_LOGGER.debug(f"{buffer}")
+    def _send_data(self, buffer, socket_type, target_socket: socket):
+        if len(buffer):
+            modified_buffer = None
+            if socket_type is SocketType.LOCAL:
+                modified_buffer = self.default_request_interceptor(buffer, socket_type)
+            elif socket_type is SocketType.REMOTE:
+                modified_buffer = self.default_response_interceptor(buffer, socket_type)
+
+            try:
+                target_socket.sendall(modified_buffer)
+            except Exception as e:
+                self.LOGGER.debug(f"Could not send data to target socket: {e.__class__}")
+                exit()
+
+    def default_request_interceptor(self, buffer, socket_type):
+        self.TCP_FROM_LOCAL_LOGGER.debug(f"{buffer}")
         return buffer
 
-    @classmethod
-    def default_response_interceptor(cls, buffer, socket_type):
-        TCP_FROM_REMOTE_LOGGER.debug(f"{buffer}")
+    def default_response_interceptor(self, buffer, socket_type):
+        self.TCP_FROM_REMOTE_LOGGER.debug(f"{buffer}")
         return buffer
 
 
