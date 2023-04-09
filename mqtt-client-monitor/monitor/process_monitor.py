@@ -11,8 +11,8 @@ main_logger = logger_factory.get_logger("monitor")
 
 
 class ProcessResult:
-    stdout = None
-    stderr = None
+    stdout = ""
+    stderr = ""
     return_code = None
     buffer_handler_result = None
     buffer_handler_exit = False
@@ -130,10 +130,8 @@ class ProcessMonitor:
                                                                   buffer_handler.stdout_handler)
 
             buffer_status.record(stderr_buffer, stdout_buffer)
-
-            if stderr_buffer is not None and stdout_buffer is not None:
-                self._result.stdout += stdout_buffer
-                self._result.stderr += stderr_buffer
+            self._result.stdout += str(stdout_buffer or "")
+            self._result.stderr += str(stderr_buffer or "")
 
             # End loop if the process has stopped
             if process_handle.poll():
