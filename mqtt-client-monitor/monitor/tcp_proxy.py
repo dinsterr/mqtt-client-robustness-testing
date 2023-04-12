@@ -115,7 +115,6 @@ class TcpProxy:
 
             status.record(local_buffer, remote_buffer)
 
-
     @classmethod
     def _send_data(cls, buffer, socket_type, target_socket: socket):
         if len(buffer):
@@ -150,6 +149,8 @@ class TcpProxy:
 
                 buffer += data
         except socket.timeout:
+            pass
+        except ConnectionResetError:
             pass
 
         return buffer

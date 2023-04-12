@@ -86,7 +86,7 @@ class BufferStatus:
             self._max_iterations_without_new_data = 1
 
     def record(self, stderr_buffer, stdout_buffer):
-        if stderr_buffer is not None and stdout_buffer is not None:
+        if stderr_buffer is not None or stdout_buffer is not None:
             self._no_new_data_counter = 0
             return
 
