@@ -36,7 +36,7 @@ def on_message(client, topic, payload, qos, properties):
     :param properties: properties of the received message
     """
 
-    logging.info(f'[RECV MSG] {topic}:{payload.decode("utf-8")}')
+    logging.info(f'[RECV MSG] {topic}:{payload.decode("utf-8", errors="ignore")}')
 
 
 def on_disconnect(client, packet, exc=None):

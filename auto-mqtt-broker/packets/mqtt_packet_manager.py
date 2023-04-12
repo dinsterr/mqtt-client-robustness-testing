@@ -77,7 +77,7 @@ class MQTTPacketManager(object):
         remaining_length = 0
         # Connect Acknowledge Flags
         flags = 0
-        remaining_length += 1
+        remaining_length += 0
         # Reason Code
         reason_code = enums.ConnectReasonCodes.Success.value
         remaining_length += 1
@@ -386,7 +386,7 @@ class MQTTPacketManager(object):
         length_lsb = packet[position]
         position += 1
         length = (length_msb << 8) | length_lsb
-        topic = packet[position: position + length].decode('utf-8')
+        topic = packet[position: position + length].decode('utf-8', errors='ignore')
         position += length
         if logger.DEBUG:
             logger.logging.debug(f"\tTopic: {topic}")
@@ -400,7 +400,7 @@ class MQTTPacketManager(object):
         :param position: current byte position in the packet
         :return: updated position and the payload of the PUBLISH packet
         """
-        payload = packet[position:].decode('utf-8')
+        payload = packet[position:].decode("utf-8", errors='ignore')
         position = position + len(payload)
         if logger.DEBUG:
             logger.logging.debug(f"\tPayload: {payload}")
@@ -422,7 +422,7 @@ class MQTTPacketManager(object):
         length_name = (length_msb << 4) | length_lsb
         protocol_name = ""
         if length_name != 0:
-            protocol_name = packet[position:position + length_name].decode('utf-8')  # MQTT
+            protocol_name = packet[position:position + length_name].decode('utf-8', errors='ignore')  # MQTT
             position += length_name
         if logger.DEBUG:
             logger.logging.debug(f"\tMSB: {length_msb}, LSB: {length_lsb}, protocol_name: {protocol_name}")
@@ -513,7 +513,7 @@ class MQTTPacketManager(object):
             current_pos += 1
             length_first_user_property = packet[current_pos]
             current_pos += 1
-            first_user_property = packet[current_pos: current_pos + length_first_user_property].decode('utf-8').lower()
+            first_user_property = packet[current_pos: current_pos + length_first_user_property].decode('utf-8', errors='ignore').lower()
             current_pos += length_first_user_property
             # unused_field = packet[current_pos]
             current_pos += 1
@@ -549,7 +549,7 @@ class MQTTPacketManager(object):
         position += 1
         length_client_id = packet[position]
         position += 1
-        client_id = packet[position: position + length_client_id].decode('utf-8')
+        client_id = packet[position: position + length_client_id].decode('utf-8', errors='ignore')
         position += length_client_id
         if logger.DEBUG:
             logger.logging.debug(f"\tClientID: {client_id}")
