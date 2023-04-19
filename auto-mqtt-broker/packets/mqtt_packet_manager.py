@@ -118,8 +118,6 @@ class MQTTPacketManager(object):
         We allow any payload size, even if it exceeds the MQTT specification limit.
         """
 
-        # TODO: Max subscription size: https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901050
-
         # fixed header
         control_packet_type = control_packet_type or enums.PacketIdentifer.PUBLISH.value
         dup = dup or 0x0

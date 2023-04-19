@@ -14,7 +14,7 @@ class RandomBitFlip(MessageGenerator):
     _message_bits: list = None
 
     def __init__(self, generator_config):
-        self._message: bytes = MQTTPacketManager.prepare_publish(generator_config.topic, "hello world")
+        self._message: bytes = MQTTPacketManager.prepare_publish(self._generator_config.topic, "hello world")
 
         ba = bitarray()
         ba.frombytes(self._message)

@@ -26,6 +26,6 @@ for (parent_path, module_name, is_package) in iter_modules([str(package_dir)]):
                 and issubclass(attribute, BaseClass):
             # Add the class to this package's variables
             globals()[attribute_name] = attribute
-            found_generators.append(module_name)
+            found_generators.append(attribute._GENERATOR_TYPE)
 
 logging.info(f"Found available message generators: {', '.join(found_generators)}\n")

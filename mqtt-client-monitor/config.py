@@ -12,7 +12,7 @@ class Config:
     #############################################
 
     # The local address of the TCP proxy to which the test system connects
-    LOCAL_ADDRESS: str = "localhost"
+    LOCAL_ADDRESS: str = "192.168.2.10"
     LOCAL_PORT: int = 8080
 
     # The address of the remote system / target MQTT broker
@@ -30,14 +30,13 @@ class Config:
     #############################################
 
     # The time in seconds that the monitor waits for new data on STDOUT/STDERR buffers before closing.
-    # (-1 = infinite)
     MONITOR_BUFFER_READ_TIMEOUT_SECS: int = 5
 
     # Matches the following regex pattern on the output STDOUT/STDERR buffers.
     REGEX_BUFFER_FILTER_PATTERN: str = "uid"
 
     # Exit on REGEX match
-    EXIT_ON_FIRST_REGEX_MATCH: bool = False
+    EXIT_ON_FIRST_REGEX_MATCH: bool = True
 
     # Add matching buffer output to log output only if it matches the pattern
     ONLY_LOG_ON_REGEX_MATCH: bool = False
@@ -52,6 +51,6 @@ class Config:
 
     # The time in seconds that the monitor waits for new TCP data from the broker before closing.
     # (-1 = no limit)
-    MAX_REMOTE_TCP_TIMEOUT_SECS = 5
+    MAX_REMOTE_TCP_TIMEOUT_SECS = 50
 
     AUTO_RESTART = False

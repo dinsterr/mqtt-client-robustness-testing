@@ -13,7 +13,7 @@ from mutators.mutator import BasicMutator
 
 class CIStringMutation(MessageGenerator):
     _GENERATOR_TYPE = "CI_STRING"
-    _seed_string = "hello world"
+    _seed_string = ""
     _mutated_payloads = None
 
     def __init__(self, generator_config):

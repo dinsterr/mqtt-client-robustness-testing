@@ -15,9 +15,12 @@
  *******************************************************************************/
 
 /*****
+ * Additions for the 'Automated Robustness Testing of MQTT Clients via a Novel Fuzzing Framework':
  * Adapted to present command injection and buffer overflow vulnerabilities via a malicious PUBLISH message.
  * - Added command line argument parsing for broker IP, port, MQTT topic
- * - Added the processmsg method that processes incoming PUBLISH messages and shows the vulnerabilities
+ * - Added the 'processmsg' method that processes incoming PUBLISH messages and illustrates the vulnerabilities
+ *
+ * David Schrenk - 19.04.2023
  *****/
 
 #include <stdio.h>

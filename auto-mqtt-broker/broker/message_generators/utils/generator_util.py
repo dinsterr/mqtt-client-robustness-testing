@@ -9,7 +9,7 @@ unicode_glyphs = ''.join(chr(char) for char in range(65533) if unicodedata.categ
 
 
 def random_unicode_string(lower_limit=0, upper_limit=_MAX_PAYLOAD_CHARS):
-    rand_length = random.randint(lower_limit, upper_limit)
+    rand_length = 10
     return ''.join([random.choice(unicode_glyphs)
                     for _ in range(rand_length)])
 
